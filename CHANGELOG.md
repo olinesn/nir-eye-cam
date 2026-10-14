@@ -23,6 +23,21 @@ To release:
 
 ### Added
 
+- Two-camera sync test. `nireyecam-record --trigger HZ` puts every camera on
+  EXTSYNC and has the driving camera (`--sync-master`, default the first)
+  output the frame trigger; `--blink HZ` has it blink a test LED on the new
+  `BLINK` output (ESP32-P4 GPIO33, J1-29). `nireyecam-synctest SESSION`
+  finds the LED in each camera's frames and measures how far apart the
+  exposures are: from frames in which both cameras caught an edge of the
+  blink when they are within one exposure, from the blink's phase otherwise,
+  with a standard error. It also reports how far the timestamps misstate
+  that offset, frames where one camera saw the LED clearly on and the other
+  clearly off, and missed triggers, and passes when every 2-second stretch is
+  within `--tolerance-us` (default 100). The simulator now models TRIG,
+  EXTSYNC, BLINK and a global-shutter exposure window, and free-running
+  simulated cameras now drift apart at their own clock rates, as real ones
+  do.
+
 - `docs/vd55g1-esp32p4.md`: an **IR LED driver and level shifting** section
   for the bench prototype. A TXB0104 breakout shifts FSYNC, TRIG and STROBE
   between the sensor's 1.8 V and the ESP32-P4's 3.3 V. A 74HCT08 on 5 V ANDs
@@ -31,6 +46,17 @@ To release:
   exposure and only when the host asked; pull-downs keep them off at
   power-up. It gives a schematic, parts, resistor values, and the safety
   rules. The wiring diagram now names these parts.
+
+### Fixed
+
+- ESP32-P4 firmware: `TRIG` ran off the RC oscillator below ~38 Hz (an
+  inaccurate frame rate, and no output at all below ~17 Hz), because the LEDC
+  driver picked the clock source from the frequency. It now runs off the
+  40 MHz crystal at every rate, choosing the PWM resolution to fit, so `TRIG`
+  and `BLINK` can also run together (they share one clock selector).
+- `nireyecam-record`: `exposure_ms` in `session.json` used the measured frame
+  period to get the line time, which is wrong when a trigger sets the period.
+  It now uses the device's own line time when it reports one.
 
 ### Changed
 

@@ -2,7 +2,7 @@
 //
 // Same packet protocol as the RP2040 build (common/nec_protocol.h), so
 // host/nireyecam records and aligns it unchanged. Commands are the RP2040
-// set, with sensor-specific ranges, plus four new ones:
+// set, with sensor-specific ranges, plus these new ones:
 //
 //   PING | INFO | INIT | START | STOP
 //   RES <W>x<H>      crop size, centred on the sensor (stopped only); W*H % 8 == 0
@@ -16,9 +16,10 @@
 //   SYNCGEN <0|1>    drive SYNC_OUT with the random pulse train
 //   TRIG <hz>        frame trigger on TRIG_OUT for every sensor's GPIO0 (0 = off)
 //   EXTSYNC <0|1>    start each frame on a GPIO0 pulse, not the sensor's timer (stopped only)
+//   BLINK <hz>       50% square wave on PIN_BLINK for the sync check's test LED (0 = off)
 //
 // Every command gets one reply, "OK <CMD> ..." or "ERR <CMD> <reason>". If the
-// host closes the port, streaming stops and the IR is disabled.
+// host closes the port, streaming stops and the IR and the test LED go off.
 
 #include <ctype.h>
 #include <stdarg.h>
@@ -135,7 +136,7 @@ static int reply_info(void)
           "\"model_id\":\"0x%08lx\",\"revision\":\"0x%04x\",\"cam_ok\":%d,\"cam_error\":\"%s\","
           "\"width\":%u,\"height\":%u,\"x\":%u,\"y\":%u,\"exposure\":%u,\"frame_length\":%u,"
           "\"line_time_ns\":%lu,\"frame_period_us\":%lu,\"again\":%u,\"dgain\":%u,\"ae\":%d,"
-          "\"led\":%d,\"syncgen\":%d,\"trig_hz\":%lu,\"extsync\":%d,\"streaming\":%d,"
+          "\"led\":%d,\"syncgen\":%d,\"trig_hz\":%lu,\"extsync\":%d,\"blink_hz\":%lu,\"streaming\":%d,"
           "\"slots\":%lu,\"csi_errors\":%lu,\"sync_edges\":%lu,\"sync_overflows\":%lu}",
           FW_VERSION, NEC_BOARD_NAME, s_uid, (unsigned long)s_sensor.model_id, (unsigned)s_sensor.revision, ok,
           ok ? "" : esp_err_to_name(s_cam_err), s_sensor.w, s_sensor.h, s_sensor.x, s_sensor.y,
@@ -143,7 +144,7 @@ static int reply_info(void)
           (unsigned long)(ok ? vd55g1_line_time_ns(&s_sensor) : 0),
           (unsigned long)(ok ? vd55g1_frame_period_us(&s_sensor) : 0), s_sensor.again,
           s_sensor.dgain, s_sensor.ae, led_enabled(), syncgen_on(), (unsigned long)trig_hz(),
-          s_sensor.extsync, s_sensor.streaming, (unsigned long)capture_slots(),
+          s_sensor.extsync, (unsigned long)blink_hz(), s_sensor.streaming, (unsigned long)capture_slots(),
           (unsigned long)capture_errors(), (unsigned long)sync_edge_count(),
           (unsigned long)sync_overflows());
 }
@@ -205,6 +206,11 @@ static int handle_command(char* cmdline)
         if (!parse_uint(arg, 1000, &v)) return reply("ERR TRIG expected 0-1000 Hz");
         err = trig_set(v);
         return err ? reply("ERR TRIG %s", esp_err_to_name(err)) : reply("OK TRIG %lu", (unsigned long)trig_hz());
+    }
+    if (!strcmp(cmd, "BLINK")) {
+        if (!parse_uint(arg, 10000, &v)) return reply("ERR BLINK expected 0-10000 Hz");
+        err = blink_set(v);
+        return err ? reply("ERR BLINK %s", esp_err_to_name(err)) : reply("OK BLINK %lu", (unsigned long)blink_hz());
     }
     if (!strcmp(cmd, "INIT")) {
         if (cam_ok() && s_sensor.streaming) return reply("ERR INIT stop first");
@@ -306,6 +312,7 @@ static void on_disconnect(void)
 {
     stop_streaming();
     led_enable(false);
+    blink_set(0);
     cap_frame_t f;
     int slot;
     while (capture_take(&f, &slot, 0)) capture_release(slot);

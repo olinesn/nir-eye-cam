@@ -280,6 +280,46 @@ leaves the numbers-only items, such as frame rate, to you. The camera's
 settings are restored at the end and the IR LEDs left off. Try it with
 `--cam sim`.
 
+## Check that two cameras expose together
+
+On the ESP32-P4 build, `nireyecam-record --trigger HZ` starts every camera's
+frames on one trigger, and `nireyecam-synctest` checks that the exposures
+really line up, by filming one blinking LED. One ESP32-P4X board per camera;
+camera `a` drives the trigger and the LED. Wire:
+- `a`'s TRIG out (GPIO23, J1-7) to the TRIG channel of **both** cameras'
+  level shifters, so it reaches both sensors' GPIO0. Leave `b`'s GPIO23 open.
+- `a`'s SYNC out (GPIO22, J1-12) to SYNC in (GPIO21, J1-11) on both boards.
+- A ground wire between the two boards.
+- The test LED: `a`'s GPIO33 (J1-29) → 330 Ω → LED → GND, where both cameras
+  see it. Any LED the cameras can see: red works with the clear (CLR)
+  module; the NIR module needs an IR LED, such as one TSAL6400.
+
+Then record about a minute with a blink rate that is not a whole or half
+multiple of the frame rate (43 Hz at 25 fps), and `--exp` at about 2 ms
+(under a quarter of the blink period), and run the check:
+
+```bash
+nireyecam-record --out runs/sync --cam a=PORT_A --cam b=PORT_B \
+    --trigger 25 --blink 43 --exp LINES --duration 60
+nireyecam-synctest runs/sync       # prints PASS or FAIL, writes runs/sync/synctest.json
+```
+
+It reports the exposure offset between the cameras, from frames in which
+both caught an edge of the blink or, past one exposure apart, from the
+blink's phase, with its standard error (a few µs after a minute on the
+simulator). It also reports how far the frame
+timestamps misstate that offset, the frame pairs in which the LED was clearly
+on in one camera and off in the other (0 when locked), and missed triggers.
+It passes when every 2-second stretch is within `--tolerance-us` (default
+100). It warns when the rates or the exposure make the measurement weak, or
+when the LED saturates the sensor. Try it without hardware, where 8 lines
+are 2.08 ms:
+
+```bash
+nireyecam-record --out runs/sim-sync --cam a=sim --cam b=sim --trigger 25 --blink 43 --exp 8 --duration 10
+nireyecam-synctest runs/sim-sync
+```
+
 ## Analyse the sensor bench test
 
 `nireyecam-sensortest` analyses the miniscope's sensor comparison

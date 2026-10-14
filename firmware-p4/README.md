@@ -17,7 +17,7 @@ and `nireyecam-align` work with it unchanged.
 | `main/board.h` | Pin map and hardware constants, set for the ESP32-P4X-Function-EV-Board (below); edit it for another board. |
 | `main/vd55g1.c` | Sensor driver: reset, detect, boot, crop, exposure/gain, GPIO roles, start/stop. |
 | `main/capture.c` | MIPI PHY LDO, CSI controller (RAW8 → RAW8, 1 lane), ISP in bypass, PSRAM frame pool. |
-| `main/syncio.c` | Timestamps for FSYNC and sync edges (GPIO interrupts), random sync pulse train, frame-trigger output (LEDC), IR enable. |
+| `main/syncio.c` | Timestamps for FSYNC and sync edges (GPIO interrupts), random sync pulse train, frame-trigger and test-LED outputs (LEDC, off the crystal), IR enable. |
 | `main/usb_link.c` | esp_tinyusb CDC on the high-speed port; DTR = host connected. |
 | `main/main.c` | Commands (list at the top of the file) and the streaming task. |
 
@@ -61,6 +61,7 @@ connector; everything else on header J1:
 | SYNC out | GPIO22 | 12 | the shared sync line (sync master only) |
 | TRIG out | GPIO23 | 7 | every sensor's GPIO0 (EXTSYNC), through a level shifter |
 | LED enable | GPIO32 | 26 | the gate that lets the sensor's STROBE (GPIO1) reach the LED driver |
+| Test LED | GPIO33 | 29 | an LED through 330 Ω to GND, filmed by every camera in the sync check (`BLINK`) |
 
 These pins are on J1 and the board itself does not use them: ESP-IDF's DVP
 camera example puts an external camera on the same ones for v3 boards.
@@ -113,7 +114,8 @@ before connecting it:
 
 `nireyecam-bench --cam PORT` runs steps 1–4 and drafts a bench-test issue
 from them; add `--extsync <fps>` for the first half of step 5, with TRIG_OUT
-wired to the sensor's GPIO0. The blinking-LED check is still by hand.
+wired to the sensor's GPIO0. `nireyecam-synctest` does the second half (the
+README's "Check that two cameras expose together").
 
 1. `INFO` over the serial port. `model_id` should read `0x53354731` (every
    VD55G1) and `revision` `0x3030` (cut 3). Cut 2 (`0x2020`) needs ST's
@@ -128,9 +130,11 @@ wired to the sensor's GPIO0. The blinking-LED check is still by hand.
    on every camera (it is refused while streaming). Keep each camera's frame
    period (`FLL`, see `frame_period_us` in `INFO`) shorter than the trigger
    period, or frames are missed. In `frames.csv`, frame intervals should equal
-   the trigger period with no gaps in `seq`. Then film a fast-blinking LED:
-   every camera must see it in the same state. Send `STOP` before turning the
-   trigger off, until it is known that the sensor stops without pulses.
+   the trigger period with no gaps in `seq`. Then check two cameras together:
+   `nireyecam-record --trigger HZ --blink HZ` and `nireyecam-synctest` film
+   one blinking LED and measure how far apart the exposures are. Send `STOP`
+   before turning the trigger off, until it is known that the sensor stops
+   without pulses (`nireyecam-record` does).
 
 ## Known gaps
 

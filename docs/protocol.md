@@ -65,6 +65,11 @@ Same packets and the same commands, with these differences
 | `LED <0-1000>` | on/off: any value above 0 lets the sensor's STROBE drive the LEDs |
 | `TRIG <hz>` | new: frame-trigger square wave on TRIG_OUT (0 = off) |
 | `EXTSYNC <0\|1>` | new: start each frame on a pulse at the sensor's GPIO0 instead of its own timer (stopped only) |
+| `BLINK <hz>` | new: 50% square wave on BLINK (GPIO33) for the two-camera sync check's test LED, 0–10000 Hz (0 = off) |
 
 `INFO` adds `sensor`, `model_id`, `revision`, `x`, `y`, `line_time_ns`,
-`frame_period_us`, `dgain`, `trig_hz`, `extsync` and `csi_errors`.
+`frame_period_us`, `dgain`, `trig_hz`, `extsync`, `blink_hz` and `csi_errors`.
+
+`TRIG` and `BLINK` run off the board's 40 MHz crystal at every frequency, so
+their rates are as accurate as the crystal. Closing the port turns `BLINK` off; `TRIG`
+keeps running, since it may be clocking other cameras.
