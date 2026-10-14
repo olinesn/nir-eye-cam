@@ -166,6 +166,12 @@ cd host && pip install -e '.[test]' && pytest
 GitHub Actions runs these on Python 3.9 and 3.14 whenever `host/` changes
 ([.github/workflows/host.yml](.github/workflows/host.yml)).
 
+## Citing
+
+If you use nir-eye-cam in your work, please cite it. The citation details are
+in [CITATION.cff](CITATION.cff); GitHub's "Cite this repository" button (in
+the repository's sidebar) turns them into APA or BibTeX.
+
 ## Changes and contributing
 
 See [CHANGELOG.md](CHANGELOG.md) for what has changed, and

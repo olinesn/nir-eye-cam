@@ -4,12 +4,18 @@ Notable changes to this project. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-Nothing has been released yet. The code currently reports version **0.1.0**:
-`FW_VERSION` in `firmware/src/main.c` (`0.1.0`) and `firmware-p4/main/main.c`
-(`0.1.0-p4`), and the host package (`host/pyproject.toml`,
-`host/nireyecam/__init__.py`). To release, rename **Unreleased** below to the
-version and date, update those four version strings to match, and tag the
-commit `vX.Y.Z`.
+Nothing has been released yet. The code currently reports version **0.1.0**
+in five places:
+- `FW_VERSION` in `firmware/src/main.c` (`0.1.0`) and
+  `firmware-p4/main/main.c` (`0.1.0-p4`);
+- the host package, in `host/pyproject.toml` and `host/nireyecam/__init__.py`;
+- `version` in `CITATION.cff`.
+
+To release:
+1. Rename **Unreleased** below to the version and date.
+2. Update those five version strings to match, and add the date as
+   `date-released` in `CITATION.cff`.
+3. Tag the commit `vX.Y.Z`.
 
 ## [Unreleased]
 

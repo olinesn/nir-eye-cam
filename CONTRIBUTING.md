@@ -121,6 +121,4 @@ included.
 
 ## Releases
 
-See the note at the top of [CHANGELOG.md](CHANGELOG.md): rename **Unreleased**
-to the version and date, update the four version strings it lists, and tag
-the commit `vX.Y.Z`.
+Follow the release steps at the top of [CHANGELOG.md](CHANGELOG.md).

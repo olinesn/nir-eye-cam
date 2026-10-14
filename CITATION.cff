@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "nir-eye-cam"
+abstract: >-
+  Small near-infrared cameras for mouse pupil and eye imaging. Firmware for a
+  Himax HM01B0 camera on an RP2040 board and for an ST VD55G1 global-shutter
+  sensor on an ESP32-P4, both streaming 8-bit frames over USB, and a Python
+  recorder that puts several free-running cameras on one timeline by
+  timestamping a shared sync line.
+authors:
+  - given-names: "Stefan N."
+    family-names: "Oline"
+    affiliation: "Princeton University"
+    orcid: "https://orcid.org/0000-0002-7094-3800"
+version: "0.1.0"
+repository-code: "https://github.com/olinesn/nir-eye-cam"
+# The project's license is not an SPDX identifier, which CFF's `license`
+# field requires, so it is linked instead.
+license-url: "https://github.com/olinesn/nir-eye-cam/blob/main/LICENSE"
+keywords:
+  - near-infrared imaging
+  - pupillometry
+  - eye tracking
+  - mouse
+  - camera firmware
+  - RP2040
+  - ESP32-P4
+  - multi-camera synchronization
