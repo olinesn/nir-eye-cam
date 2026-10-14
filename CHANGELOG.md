@@ -21,6 +21,14 @@ To release:
 
 ## [Unreleased]
 
+### Added
+
+- `docs/hardware.md`: a **Depth sensing** section for the pupil-dilation and
+  facial-expression projects. It compares small depth sensors (direct and
+  indirect ToF, structured light, RealSense D405, stereo), estimates stereo
+  depth precision for the VD55G1 build, and recommends an approach for each
+  project.
+
 ## [0.1.0] - 2026-10-14
 
 ### Added
