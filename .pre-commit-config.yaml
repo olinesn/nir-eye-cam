@@ -62,6 +62,20 @@ repos:
         files: ^\.zenodo\.json$
         args: [--schemafile, "https://raw.githubusercontent.com/zenodo/zenodo/cf5ca46ab0b105f0c831e462a32da684fbae3647/zenodo/modules/deposit/jsonschemas/deposits/records/legacyrecord.json"]
 
+  # README.md's "Parts and wiring" section is drawn from docs/wiring.yml and
+  # the firmware's pin headers; this fails while it is out of date, or when
+  # docs/wiring.yml names a pin the firmware does not define. Fix with:
+  #   python3 scripts/wiring.py
+  - repo: local
+    hooks:
+      - id: wiring-diagram
+        name: README wiring diagrams match docs/wiring.yml and the pin headers
+        entry: python scripts/wiring.py --check
+        language: python
+        additional_dependencies: [pyyaml==6.0.2]
+        files: ^(README\.md|docs/wiring\.yml|scripts/wiring\.py|firmware/src/board_pins\.h|firmware-p4/main/board\.h)$
+        pass_filenames: false
+
   # Python: bug-catching lint rules only (configured in host/pyproject.toml);
   # no formatter, so the code's existing layout is left alone.
   - repo: https://github.com/astral-sh/ruff-pre-commit

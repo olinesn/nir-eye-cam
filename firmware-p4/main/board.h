@@ -20,8 +20,8 @@
 // connector's I2C, as in ESP-IDF's MIPI camera example (mipi_isp_dsi), and
 // also on J1-3 / J1-5. The board's own I2C devices (audio codec, touch
 // controller) share the bus; VERIFY nothing else answers at 0x10.
-#define PIN_I2C_SDA          7
-#define PIN_I2C_SCL          8
+#define PIN_I2C_SDA          7   // J1-3  (and the camera connector)
+#define PIN_I2C_SCL          8   // J1-5  (and the camera connector)
 #define SENSOR_I2C_ADDR      0x10
 #define SENSOR_I2C_HZ        400000
 
