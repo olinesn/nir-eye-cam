@@ -21,6 +21,8 @@ To release:
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-14
+
 ### Added
 
 - `nireyecam-bench`: measures one camera on the bench and drafts a **Bench
@@ -34,36 +36,6 @@ To release:
     `csi_errors` and external sync (`--extsync`).
 
   Each covered form item gets a suggested result. Works on the simulator.
-- `docs/vd55g1-fpdlink.md`: a design sketch for a freely moving build. Only
-  the VD55G1 and a TI DS90UB953 serializer ride on the head; one thin coax
-  through two of the commutator's four free contacts carries power, video,
-  I²C and GPIO to a DS90UB934 deserializer and the ESP32-P4 at the base. The
-  953 runs in its backward-compatible DVP mode, 700 Mbit/s on the coax
-  instead of 4.16 Gbit/s. SYNC is timestamped at the base, so no sync wire
-  crosses the joint. The plan starts with a bench test of the link through
-  the joint on TI evaluation boards. Nothing is built.
-- `docs/hardware.md`: a **Tether and commutator** section for freely moving
-  animals. The Neuropixels cable CBL_1000 cannot carry the ESP32-P4 build's
-  USB at any speed: it is one twisted pair, and USB 2.0 needs four wires (a
-  USB-C-to-USB-C cable, five plus a shield). It compares the cable with the
-  USB 2.0 and USB-C limits, estimates the camera's power draw and the voltage
-  lost over a thin tether, summarizes Doric's 24-contact commutator, and ranks
-  the options: the camera's own cable through the joint's 4-pin auxiliary
-  port at full speed first, then a serializer over one pair, then wireless.
-  A draft of that camera cable gives the pin map, the two cables, the bench
-  checks, and the open question of where the SYNC line goes, since USB takes
-  all four contacts.
-
-- `docs/miniscope.md`: a design sketch for a dual-colour (GCaMP + red
-  indicator) one-photon miniscope built from the VD55G1 build, as a
-  replacement for the Inscopix nVue. It compares one sensor with alternating
-  LEDs against two sensors, assigns the VD55G1's GPIOs for alternating
-  excitation, notes what each option needs from the FPD-Link tether
-  (`docs/vd55g1-fpdlink.md`), designs the excitation path (LED condensers,
-  filter angles, combining two colours, fibre-coupled light, LED drivers),
-  lists filter sets and indicator crosstalk, and compares candidate sensors
-  (VD55G1, ams Mira050/Mira220, Sony IMX900 and IMX662, PYTHON480) per cell
-  of tissue. Design only; open questions are marked VERIFY.
 - `nireyecam-sensortest`: analyses the sensor bench test from recorded
   frames, EMVA 1288-style. `ptc`: conversion gain, read noise, saturation
   capacity, linearity, QE per emission band, dark current, DSNU / PRNU (after
@@ -82,6 +54,35 @@ To release:
   a results table and decision rules. The winner's ESP32-P4 build is then
   checked with `nireyecam-bench`. The questions for ST and ams are listed with
   the step each answer affects, and what happens without one.
+- `docs/hardware.md`: a **Tether and commutator** section for freely moving
+  animals. The Neuropixels cable CBL_1000 cannot carry the ESP32-P4 build's
+  USB at any speed: it is one twisted pair, and USB 2.0 needs four wires (a
+  USB-C-to-USB-C cable, five plus a shield). It compares the cable with the
+  USB 2.0 and USB-C limits, estimates the camera's power draw and the voltage
+  lost over a thin tether, summarizes Doric's 24-contact commutator, and ranks
+  the options: the camera's own cable through the joint's 4-pin auxiliary
+  port at full speed first, then a serializer over one pair, then wireless.
+  A draft of that camera cable gives the pin map, the two cables, the bench
+  checks, and the open question of where the SYNC line goes, since USB takes
+  all four contacts.
+- `docs/vd55g1-fpdlink.md`: a design sketch for a freely moving build. Only
+  the VD55G1 and a TI DS90UB953 serializer ride on the head; one thin coax
+  through two of the commutator's four free contacts carries power, video,
+  I²C and GPIO to a DS90UB934 deserializer and the ESP32-P4 at the base. The
+  953 runs in its backward-compatible DVP mode, 700 Mbit/s on the coax
+  instead of 4.16 Gbit/s. SYNC is timestamped at the base, so no sync wire
+  crosses the joint. The plan starts with a bench test of the link through
+  the joint on TI evaluation boards. Nothing is built.
+- `docs/miniscope.md`: a design sketch for a dual-colour (GCaMP + red
+  indicator) one-photon miniscope built from the VD55G1 build, as a
+  replacement for the Inscopix nVue. It compares one sensor with alternating
+  LEDs against two sensors, assigns the VD55G1's GPIOs for alternating
+  excitation, notes what each option needs from the FPD-Link tether
+  (`docs/vd55g1-fpdlink.md`), designs the excitation path (LED condensers,
+  filter angles, combining two colours, fibre-coupled light, LED drivers),
+  lists filter sets and indicator crosstalk, and compares candidate sensors
+  (VD55G1, ams Mira050/Mira220, Sony IMX900 and IMX662, PYTHON480) per cell
+  of tissue. Design only; open questions are marked VERIFY.
 
 ## [0.2.0] - 2026-10-14
 
@@ -173,6 +174,7 @@ To release:
   `self._stop`, which shadows a method `Thread.join()` calls on those
   versions. It was pushed to `main` before CI tested older Pythons.
 
-[Unreleased]: https://github.com/olinesn/nir-eye-cam/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/olinesn/nir-eye-cam/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/olinesn/nir-eye-cam/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/olinesn/nir-eye-cam/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/olinesn/nir-eye-cam/releases/tag/v0.1.0
