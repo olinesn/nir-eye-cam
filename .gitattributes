@@ -1,0 +1,29 @@
+# Line endings: store and check out every text file with LF, on every OS.
+# Shell commands, CMake, ESP-IDF's Kconfig/sdkconfig and Python all expect LF,
+# and a Windows checkout with CRLF breaks some of them.
+* text=auto eol=lf
+
+# Build outputs and recordings, in case one is ever committed on purpose:
+# never touch their bytes, never try to diff them as text.
+*.uf2 binary
+*.bin binary
+*.elf binary
+*.mkv binary
+*.mp4 binary
+*.u8  binary
+*.png binary
+*.jpg binary
+*.pdf binary
+
+# Better hunk headers in `git diff` (the enclosing function or heading).
+*.c  diff=cpp
+*.h  diff=cpp
+*.py diff=python
+*.md diff=markdown
+
+# Generated lock files: GitHub collapses them in pull-request diffs.
+host/uv.lock                   linguist-generated=true
+firmware-p4/dependencies.lock  linguist-generated=true
+
+# Copied unchanged from the Pico SDK: left out of GitHub's language stats.
+firmware/pico_sdk_import.cmake linguist-vendored=true
