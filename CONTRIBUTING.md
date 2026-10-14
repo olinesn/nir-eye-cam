@@ -1,6 +1,7 @@
 # Contributing
 
-Thanks for helping. This repo is two camera firmwares and a Python host
+Thanks for helping. Everyone taking part is expected to follow the
+[Code of Conduct](CODE_OF_CONDUCT.md). This repo is two camera firmwares and a Python host
 package that all speak one USB protocol, so most changes touch more than one
 of them. This guide covers how to set up, what to check before opening a pull
 request, and the rules that keep the pieces in agreement.

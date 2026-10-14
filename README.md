@@ -170,6 +170,8 @@ GitHub Actions runs these on Python 3.9 and 3.14 whenever `host/` changes
 
 See [CHANGELOG.md](CHANGELOG.md) for what has changed, and
 [CONTRIBUTING.md](CONTRIBUTING.md) for how to set up, test, and submit changes.
+Everyone taking part is expected to follow the
+[Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License
 
