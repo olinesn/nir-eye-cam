@@ -1,0 +1,99 @@
+name: Bug report
+description: Something in the firmware, the host tools, CI or the docs does not work as described.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. A bug that shows up with the simulated camera
+        (`--cam name=sim`) is much easier to fix than one that needs hardware,
+        so please say whether you tried it.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - RP2040 firmware (XIAO RP2040)
+        - RP2040 firmware (Raspberry Pi Pico)
+        - ESP32-P4 firmware (VD55G1)
+        - Host tools (nireyecam-record / -align / -list)
+        - Simulated camera
+        - CI / build
+        - Docs
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Commit (`git rev-parse --short HEAD`), tag, or the CI run the firmware came from.
+      placeholder: e.g. 0858ebc
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Include any error message exactly as printed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The commands you ran, in order.
+      placeholder: |
+        1. nireyecam-record --out runs/t --cam eye=/dev/cu.usbmodem1101 --led 300
+        2. ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: simulator
+    attributes:
+      label: Does it happen with the simulated camera?
+      options:
+        - "Yes"
+        - "No, only with real hardware"
+        - Didn't try
+        - Not applicable (build, CI or docs)
+    validations:
+      required: true
+
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Hardware
+      description: Board, sensor module, lens, wiring changes, and how the cameras are connected (if any).
+      placeholder: e.g. XIAO RP2040 + Arducam HM01B0 Pico module, stock lens, 2 cameras on one powered hub
+
+  - type: textarea
+    id: info
+    attributes:
+      label: Device INFO
+      description: The camera's reply to `INFO` (also saved in the session's `session.json` under `cameras[].device`).
+      render: json
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Recorder output, `session.json`, or the firmware console log (`idf.py monitor` on the ESP32-P4).
+      render: shell
+
+  - type: input
+    id: environment
+    attributes:
+      label: Computer and software
+      placeholder: e.g. macOS 26.1, Python 3.12, ffmpeg 7.1

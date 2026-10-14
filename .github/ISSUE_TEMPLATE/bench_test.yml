@@ -1,0 +1,76 @@
+name: Bench test result
+description: Record what a test on real hardware showed, for anything the code or docs mark as not yet verified.
+labels: [bench-test]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Neither firmware had run on a real board when it was written, and the
+        code and docs mark what still needs checking with **VERIFY**. Use this
+        form to record what you measured, whether it confirms the assumption
+        or not. A result that contradicts the code is the most useful kind.
+
+  - type: dropdown
+    id: item
+    attributes:
+      label: What was tested
+      options:
+        - "RP2040: frame rate (depends on the Arducam module's oscillator)"
+        - "RP2040: USB throughput / dropped frames"
+        - "RP2040: analog gain register bits (0x0205[6:4])"
+        - "RP2040: VSYNC timestamps while the PIO reads the same pin"
+        - "HM01B0: NIR (850 nm) response through the stock lens"
+        - "ESP32-P4: sensor boots (I2C 0x10, model ID, CLKIN frequency)"
+        - "ESP32-P4: RAW8 capture over CSI (csi_errors stays 0)"
+        - "ESP32-P4: FSYNC_OUT timestamp per frame (capture.c VERIFY)"
+        - "ESP32-P4: USB high-speed throughput"
+        - "ESP32-P4: external sync on GPIO0 (EXTSYNC / UM3224)"
+        - "ESP32-P4: P-Board pinout and MIPI lane polarity"
+        - "ESP32-P4: board's high-speed port works as a USB device"
+        - "Both: multi-camera alignment on real cameras"
+        - "Both: optics (close-up lens, field of view, focus)"
+        - "Both: IR illumination level at the eye"
+        - Other (describe below)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options:
+        - Confirms what the code / docs assume
+        - Differs from what the code / docs assume
+        - Inconclusive
+    validations:
+      required: true
+
+  - type: textarea
+    id: setup
+    attributes:
+      label: Hardware and firmware
+      description: Board, sensor module, lens, wiring, firmware commit or CI run, and the settings used (resolution, exposure, gain, LED).
+    validations:
+      required: true
+
+  - type: textarea
+    id: method
+    attributes:
+      label: How it was measured
+      description: Commands, instruments, and conditions, so someone else can repeat it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: measurements
+    attributes:
+      label: Measurements
+      description: Numbers, with units. Attach session.json, frames.csv, alignment.json, images or scope captures if useful.
+    validations:
+      required: true
+
+  - type: textarea
+    id: follow-up
+    attributes:
+      label: What should change
+      description: If the result differs, which code or docs are now wrong, and how.

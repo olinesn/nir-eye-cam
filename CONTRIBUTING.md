@@ -106,6 +106,10 @@ not included.
 
 ## Commits and pull requests
 
+- Issues have three forms: bug report, feature request, and **bench test
+  result**. Use the last to record what a measurement on real hardware
+  showed for anything marked `VERIFY`, whether or not it matches the code.
+  Pull requests get a checklist mirroring this guide.
 - Work on a branch and open a pull request to `main`. Both CI workflows must
   pass before merging.
 - Write commit messages like the existing history: a short imperative summary

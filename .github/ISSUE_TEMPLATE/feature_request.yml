@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest a change to the cameras, the firmware, or the host tools.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you are trying to do
+      description: The experiment or workflow, and what gets in the way today.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - RP2040 firmware
+        - ESP32-P4 firmware
+        - USB protocol / commands
+        - Host tools
+        - Hardware / optics / illumination
+        - CI / build
+        - Docs
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
