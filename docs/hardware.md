@@ -199,11 +199,11 @@ loses ~0.8 V), or double the power wires on a joint with contacts to spare.
 
 ### The commutator
 
-The Doric Assisted Electrical Rotary Joint, 24 contacts: under 0.5 Ω per
-contact, under 0.025 Ω of variation while rotating, up to 40 rpm. It comes
-with HDMI + 4-pin Molex, 2 × PZN-12, 2 × HARWIN, or SMA + micro-USB + PZN-12
-connectors. Doric lists Neuropixels 1.0/2.0 and the UCLA Miniscope V4 as
-tested, through its own adapter cables.
+Doric's 24-contact assisted rotary joints, electrical only or with a
+fiber-optic channel: under 0.5 Ω per contact, under 0.025 Ω of variation
+while rotating, up to 40 rpm. They come with HDMI + 4-pin Molex, 2 × PZN-12,
+2 × HARWIN, or SMA + micro-USB + PZN-12 connectors. Doric lists Neuropixels
+1.0/2.0 and the UCLA Miniscope V4 as tested, through its own adapter cables.
 
 - **No current or bandwidth rating** is published.
 - **USB high speed through it is untested.** Its connectors and slip rings are
@@ -214,36 +214,38 @@ tested, through its own adapter cables.
   "USB2 camera signal" port (Rotary Bundle-imaging Fluorescence Mini Cube) and
   a USB-C joint for its 2-color microscope only, and does not say whether that
   USB crosses the slip ring. Ask Doric.
-- **Our rigs use the HDMI + 4 version.** Neuropixels goes through the HDMI
-  port on Doric's two-part Neuropixels adapter: 1 m from the headstage to the
-  rotor, 4 m from the stator to the PXIe card. The other port, a 4-pin Molex
-  Micro-Fit 3.0 on both the rotor and the stator, is for "custom use" in
-  Doric's manual: four contacts, the same as USB 2.0's VBUS, GND, D+ and D−.
-  **VERIFY** that nothing else on the rig uses it, and ask Doric for the
-  current rating per contact.
+- **Our rigs have the hybrid HDMI + 4 version,** `AHRJ-OE_1x1_24_HDMI+4`
+  ("Assisted 1x1 Fiber-optic & Electric Rotary Joint - 24 contacts, HDMI + 4
+  auxiliary contact connectors"). Neuropixels goes through the HDMI port on
+  Doric's `ADAPTER_NPX_HDMI` kit: USB-C at the PXIe card to an Omnetics PZN-04
+  at the headstage, one cable on each side of the joint. The "+4 auxiliary
+  contact" connectors are 4-pin Molex Micro-Fit 3.0 ports on the rotor and the
+  stator, for "custom use" in Doric's manual: four contacts, the same as USB
+  2.0's VBUS, GND, D+ and D−. **VERIFY** that nothing else on the rig uses
+  them, and ask Doric for the current rating per contact.
 
 ### Options, in order
 
 1. **The camera's own cable through the 4-pin Molex port, full speed first.**
    Two cables, each with a Molex plug: one from the rotor to the camera
-   (VBUS, GND and a twisted D+/D− pair), one from the stator to a powered USB
-   hub next to the commutator.
-   - **Put the hub at the commutator.** USB allows ~5 m of cable (26 ns one
-     way, at full and high speed alike), and the Neuropixels layout, 1 m
-     below the joint plus 4 m above it, already uses all of it before the
-     joint's own wiring. A hub starts a new 5 m segment to the PC, and gives
-     a firm 5 V right at the joint.
+   (VBUS, GND and a twisted D+/D− pair), one from the stator to the PC.
+   - **Keep the whole path under ~5 m.** USB allows ~5 m of cable (26 ns one
+     way, at full and high speed alike), counted from the PC to the camera
+     and including the joint's own wiring. With ~1 m on each side of the
+     joint, as on the Neuropixels adapter, it fits. If the PC is farther
+     away, put a powered USB hub next to the commutator: it starts a new 5 m
+     segment, and gives a firm 5 V right at the joint.
    - **Power at 5 V works with a reasonable tether** (estimates): at 250 mA
-     the joint loses up to ~0.25 V, 1 m of 28 AWG ~0.12 V, and a short cable
-     to the hub ~0.05 V. The camera sees ~4.5 V from a 5.0 V port (~4.4 V
-     during strobes): outside USB's 125 + 125 mV budget, but enough for a
-     3.3 V regulator. With a longer or thinner tether, put a small board at the
-     stator that sends ~12 V on the VBUS contact, switched on only while the
-     hub's VBUS is present, and step it down on the head. The camera is then
-     self-powered as far as USB is concerned, so it must sense that line
-     before connecting to the bus (USB 2.0 §7.1.5.1; esp_tinyusb's
-     `self_powered` and `vbus_monitor_io`).
-   - **USB-C at the hub** needs a fifth wire (CC) that the joint does not
+     the joint loses up to ~0.25 V, and 1 m of 28 AWG on each side ~0.12 V
+     each. The camera sees ~4.5 V from a 5.0 V port (~4.3 V during strobes):
+     outside USB's 125 + 125 mV budget, but enough for a 3.3 V regulator.
+     With a longer or thinner tether, put a small board at the stator that
+     sends ~12 V on the VBUS contact, switched on only while the PC's VBUS is
+     present, and step it down on the head. The camera is then self-powered
+     as far as USB is concerned, so it must sense that line before connecting
+     to the bus (USB 2.0 §7.1.5.1; esp_tinyusb's `self_powered` and
+     `vbus_monitor_io`).
+   - **USB-C at the PC** needs a fifth wire (CC) that the joint does not
      have. End the stator cable in USB-A, or in a USB-C plug with Rd (5.1 kΩ)
      from CC to GND inside it, as in a USB-C-to-USB-B cable (USB-C
      specification Table 3-15).
@@ -279,8 +281,9 @@ tested, through its own adapter cables.
   R2.5: Table 3-1 (cable lengths), Table 3-11 (USB 2.0 cable wiring), Table
   3-15 (USB-C to USB 2.0 Standard-B), §4.4.1 (IR drop).
 - Doric Lenses [Assisted Electrical Rotary Joints, 24 contacts](https://neuro.doriclenses.com/collections/electrical-rotary-joints/products/assisted-electrical-rotary-joints-24-contacts)
-  product page and [user manual](https://www.doriclenses.com/downloads/UserManual/UserManual_ARJ_24_V1.0.0.pdf)
-  v1.0.0; [Neuropixels Adapter](https://neuro.doriclenses.com/products/adapter-hdmi-Neuropixels).
+  and [Assisted 1x1 Fiber-optic & Electric Rotary Joints, 24 contacts](https://neuro.doriclenses.com/products/assisted-fiber-optic-electric-rotary-joints-1)
+  product pages, and the [user manual](https://www.doriclenses.com/downloads/UserManual/UserManual_ARJ_24_V1.0.0.pdf)
+  v1.0.0 for both; [Neuropixels Adapter](https://neuro.doriclenses.com/products/adapter-hdmi-Neuropixels).
 - Espressif [ESP32-P4 datasheet](https://documentation.espressif.com/esp32-p4-chip-revision-v1.3_datasheet_en.html),
   Table 5-7. TI [DS90UB953-Q1](https://www.ti.com/product/DS90UB953-Q1)
   product page. Open Ephys ONIX docs,
