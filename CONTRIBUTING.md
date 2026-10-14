@@ -99,6 +99,13 @@ Don't describe behavior as tested on hardware unless it was.
 LEDs off and switch them off when the host disconnects. Keep it that way:
 these LEDs shine into an animal's eye.
 
+**Citation metadata lives in two files; change them together.**
+`CITATION.cff` drives GitHub's "Cite this repository". `.zenodo.json` is what
+Zenodo records for each archived release, and when it exists Zenodo uses it
+instead of `CITATION.cff`. Both list the same authors, affiliations, ORCID iDs,
+abstract and keywords: an author added to one and not the other is missing
+from half the citations.
+
 **Licensing.** The project uses a Princeton University license (see
 [LICENSE](LICENSE)). Code adapted from elsewhere keeps its notice (see the
 README's License section). Don't copy GPL code into the firmware. In
