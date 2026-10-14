@@ -10,6 +10,10 @@ and it has GPIOs for sync and strobe. It outputs MIPI CSI-2, which an RP2040
 cannot receive, so the host chip becomes an ESP32-P4: MIPI CSI-2 input plus
 USB 2.0 high speed (480 Mbit/s).
 
+For a freely moving animal tethered through a commutator, see
+[vd55g1-fpdlink.md](vd55g1-fpdlink.md): the same sensor with only a serializer
+on the head, and the ESP32-P4 at the base.
+
 ## Block diagram (one camera)
 
 ```

@@ -255,16 +255,16 @@ while rotating, up to 40 rpm. They come with HDMI + 4-pin Molex, 2 × PZN-12,
      320 × 320 at 100 fps, then ~30 s to send it. Then test high speed through
      the joint: the Micro-Fit is a power connector, not built for 480 Mbit/s.
      If it holds, ~10 MB/s.
-2. **A serializer over one pair or a thin coax,** as Neuropixels and Open Ephys
-   ONIX headstages do. Only the sensor, a TI DS90UB953 serializer (CSI-2 input,
-   power over the same cable, 0.28 W, 5 × 5 mm), regulators and LEDs go on the
-   animal; the ESP32-P4 sits off the animal behind a DS90UB954 deserializer.
-   Power, video, I²C and the sync and strobe lines share one pair. This is the
-   only design that suits a CBL_1000-class wire, and it takes weight off the
-   head. **VERIFY** the link through the commutator: the DS90UB953 normally
-   runs at 4.16 Gbit/s, far above what a thin pair and a slip ring are known to
-   carry. It has a lower-rate mode for older deserializers (TI application note
-   SNLA270).
+2. **A serializer over one thin coax,** as Neuropixels, Open Ephys ONIX
+   headstages and the UCLA Miniscope V4 do. Only the sensor, a TI DS90UB953
+   serializer and its supplies go on the animal; the ESP32-P4 sits at the base
+   behind a DS90UB934 deserializer. The coax takes two of the four contacts and
+   carries power, video, I²C and GPIO. SYNC needs no wire through the joint,
+   because the ESP32-P4 timestamps it at the base. In its backward-compatible
+   mode the 953 runs the coax at 700 Mbit/s (50 Mpixel/s), the rate ONIX
+   uses, instead of its usual 4.16 Gbit/s. **VERIFY** that rate through the
+   Micro-Fit contacts and slip rings first. Design sketch:
+   [vd55g1-fpdlink.md](vd55g1-fpdlink.md).
 3. **Wireless.** The ESP32-P4 has no radio, and a 100 mAh battery runs ~1 W
    for only ~20 minutes, on a mouse.
 

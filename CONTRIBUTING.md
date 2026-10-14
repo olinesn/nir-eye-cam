@@ -14,7 +14,7 @@ pull request, and the rules that keep the pieces in agreement.
 | `firmware-p4/` | ESP32-P4 firmware (ESP-IDF) for the ST VD55G1 global-shutter sensor |
 | `common/nec_protocol.h` | The packet header both firmwares use |
 | `host/` | `nireyecam`: recorder, aligner, camera discovery, and a simulated camera |
-| `docs/` | Hardware, protocol, and the VD55G1 build |
+| `docs/` | Hardware, protocol, and the VD55G1 builds |
 
 ## Set up
 
