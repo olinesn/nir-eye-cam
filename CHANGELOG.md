@@ -21,6 +21,18 @@ To release:
 
 ## [Unreleased]
 
+### Changed
+
+- ESP32-P4 firmware: `board.h` is now the pin map for Espressif's
+  ESP32-P4X-Function-EV-Board (chip revision v3.1+, which the build targets),
+  instead of placeholders. Camera I2C on GPIO7/8 (its camera connector);
+  FSYNC in, SYNC in, SYNC out and TRIG out on GPIO20-23, and the IR LED gate
+  on GPIO32 (was GPIO24, which the board does not bring out), all on header
+  J1. `firmware-p4/README.md` gives the wiring table, which USB port does
+  what, and the P-Board questions to check before power-up (lane polarity,
+  the 22-to-15-pin cable, power enable, XSHUTDOWN, CLKIN, which sensor GPIOs
+  it brings out). `docs/vd55g1-esp32p4.md` recommends this board.
+
 ## [0.3.0] - 2026-10-14
 
 ### Added

@@ -45,8 +45,9 @@ a trigger, on top of providing the timeline.
 |---|---|
 | ST **CAM-5G1-080NIR** promodule | VD55G1, 804×704 mono global shutter, 2.16 µm. 80° DFOV, EFL 1.32 mm, F/2.0, **940 nm bandpass filter built in**. Head 5.0 × 5.0 × 2.55 mm; 11.65 × 8.0 mm including the connector. |
 | or **CAM-5G1-081CLR** | Same optics with a clear filter. Use it for 850 nm illumination and add an 830 nm long-pass filter. |
-| ST **STEVAL-CAM-M0I** "P-Board" (prototype) | 30-pin promodule → 22-pin FFC, MIPI 1–2 lanes + I2C, 30 × 35 × 11 mm, 10 cm cable. **VERIFY** its 22-pin pinout against the ESP32-P4 board's connector. ST warned that another of its boards (STEVAL-56G3MAI) has lane polarity that does not match the Raspberry Pi pinout and could damage boards. |
-| ESP32-P4 board (prototype) | e.g. Waveshare ESP32-P4-NANO (~50 × 50 mm, 2-lane CSI, USB 2.0 HS OTG, 32 MB PSRAM). **VERIFY** its HS port can be used as a *device* to the PC: on the Nano it is a Type-A host-style socket. |
+| (bring-up only) **CAM-5G1-160CLR** | Same sensor and connector, 160° DFOV fisheye (EFL 0.825 mm, < −76% TV distortion). Fine for bring-up; too wide and too distorted for the eye. |
+| ST **STEVAL-CAM-M0I** "P-Board" (prototype; order code STEVAL-CAM-M0I1) | 30-pin promodule → 22-pin FFC, MIPI 1–2 lanes + I2C, 30 × 35 × 11 mm, 10 cm cable. **VERIFY** its 22-pin pinout against the ESP32-P4 board's connector. ST warned that another of its boards (STEVAL-56G3MAI) has lane polarity that does not match the Raspberry Pi pinout and could damage boards. |
+| ESP32-P4 board (prototype) | Espressif **ESP32-P4X-Function-EV-Board**: chip revision v3.1+ (what the firmware builds for), a Type-C port wired to USB 2.0 high speed as a device, a 15-pin 1.0 mm MIPI CSI connector, 40-pin header. Pin map in [`firmware-p4/README.md`](../firmware-p4/README.md). Not the older ESP32-P4-Function-EV-Board (v1.x silicon), and not the Waveshare ESP32-P4-NANO, whose high-speed port is a Type-A host-style socket. |
 | Final: custom carrier | ESP32-P4 module + matching BM28 receptacle (likely the `BM28B0.6-30DS/2-0.35V` part; check) + 3 LDOs + 24 MHz oscillator + 1.8 V level shifters + LED driver + USB-C. Only the 5 mm module and lens need to sit at the eye; the carrier can be centimetres away on a flex. |
 | Close-up lens | Small plano-convex, ~6 mm diameter, f = 10–20 mm, in a 3D-printed cap over the module. |
 | IR LEDs | 940 nm with the NIR module, or 850 nm with the clear one. Driven from the sensor's STROBE output, so they are on only during exposure. |
@@ -187,3 +188,7 @@ were not raw vendor bulk. **VERIFY** by measuring early. The 320 × 320 crop at
 - ST STEVAL-CAM-M0I (P-Board)
 - ESP-IDF camera controller driver docs (ESP32-P4); esp_video UVC example
 - Waveshare ESP32-P4-NANO docs
+- Espressif ESP32-P4X-Function-EV-Board user guide (ports, header J1); ESP-IDF v6.1
+  camera examples (`examples/peripherals/camera`, v3-board pin sets)
+- ST `vd55g1-linux-driver` Raspberry Pi overlays (`dts/rpi`: 12 MHz clock,
+  lane polarity, LED on sensor GPIO2)

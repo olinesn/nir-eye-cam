@@ -14,7 +14,7 @@ and `nireyecam-align` work with it unchanged.
 
 | File | Does |
 |---|---|
-| `main/board.h` | Pin map and hardware constants. **Placeholder GPIOs**; set them for your board. |
+| `main/board.h` | Pin map and hardware constants, set for the ESP32-P4X-Function-EV-Board (below); edit it for another board. |
 | `main/vd55g1.c` | Sensor driver: reset, detect, boot, crop, exposure/gain, GPIO roles, start/stop. |
 | `main/capture.c` | MIPI PHY LDO, CSI controller (RAW8 → RAW8, 1 lane), ISP in bypass, PSRAM frame pool. |
 | `main/syncio.c` | Timestamps for FSYNC and sync edges (GPIO interrupts), random sync pulse train, frame-trigger output (LEDC), IR enable. |
@@ -33,21 +33,65 @@ idf.py -p PORT flash monitor
 ```
 
 `PORT` is the board's UART / USB-serial-JTAG port, not the high-speed USB port
-the camera streams on. Flashing a CI build without ESP-IDF is covered in the
-main README's "Flash the firmware" section.
+the camera streams on. On the ESP32-P4X-Function-EV-Board, flash through the
+Type-C port labelled **USB Serial/JTAG**, and connect the computer that records
+to the Type-C port labelled **USB 2.0** (the high-speed one). That port and
+the Type-A port share the high-speed USB, so leave the Type-A empty. Flashing a
+CI build without ESP-IDF is covered in the main README's "Flash the firmware"
+section.
 
 `esp_tinyusb` is fetched automatically (see `main/idf_component.yml`). The
 camera shows up as a USB serial device named "NIR Eye Cam" on the
 high-speed port; logs go to the board's UART / USB-serial-JTAG console.
 
+## Board: ESP32-P4X-Function-EV-Board
+
+`main/board.h` is set for Espressif's **ESP32-P4X-Function-EV-Board**: chip
+revision v3.1 or later, which is what `sdkconfig` builds for, and a Type-C
+port wired to the high-speed USB as a device. The older
+ESP32-P4-Function-EV-Board (no X) has v1.x silicon and does not run this
+build. The camera (ST's STEVAL-CAM-M0I P-Board) goes on the 15-pin MIPI CSI
+connector; everything else on header J1:
+
+| Signal | ESP32-P4 | J1 pin | Connects to |
+|---|---|---|---|
+| I2C SDA / SCL | GPIO7 / GPIO8 | 3 / 5 | the camera connector already; J1 too |
+| FSYNC in | GPIO20 | 13 | sensor GPIO2 (FSYNC_OUT), through a level shifter |
+| SYNC in | GPIO21 | 11 | the shared sync line |
+| SYNC out | GPIO22 | 12 | the shared sync line (sync master only) |
+| TRIG out | GPIO23 | 7 | every sensor's GPIO0 (EXTSYNC), through a level shifter |
+| LED enable | GPIO32 | 26 | the gate that lets the sensor's STROBE (GPIO1) reach the LED driver |
+
+These pins are on J1 and the board itself does not use them: ESP-IDF's DVP
+camera example puts an external camera on the same ones for v3 boards.
+GPIO26/27 (the LCD adapter's default backlight and reset), GPIO37/38 (UART0)
+and GPIO0/1/45 (not connected by default) are left alone.
+
 ## Before first power-up
 
-- Set the GPIOs in `main/board.h` for your board and wiring.
-- Set `SENSOR_EXT_CLK_HZ` to the frequency actually on the module's CLKIN.
-  The sensor's PLL is computed from it.
-- Check the adapter's MIPI lane polarity against the ESP32-P4 board's camera
-  connector. ST warned that one of its adapter boards does not match the
-  Raspberry Pi pinout.
+Open questions about the P-Board, to check with a meter and its data brief
+before connecting it:
+
+- **Lane polarity.** ST's Raspberry Pi overlays set `lane-polarities <1 1>`
+  for some of its VD55G1 boards, and ST warned that one of its adapter boards
+  does not match the Raspberry Pi pinout. The ESP32-P4 cannot swap a lane's
+  P and N in software, so a swapped board needs a cable that swaps them.
+- **The cable.** The P-Board has a 22-pin FFC output; the ESP32-P4X board
+  has a 15-pin, 1.0 mm Raspberry-Pi-style connector. Check the pinouts
+  before buying a 22-to-15-pin cable.
+- **Power enable.** ST's overlay powers the module's 2.8 V rail from a
+  regulator the host switches through the camera connector's enable pin.
+  Check what the ESP32-P4X board does with that pin.
+- **XSHUTDOWN.** No board GPIO drives it (`PIN_XSHUTDOWN` is -1), so the
+  P-Board must hold it high.
+- **CLKIN.** `SENSOR_EXT_CLK_HZ` is 12 MHz, as in ST's overlay. The sensor's
+  PLL is computed from it.
+- **Sensor GPIOs.** ST's overlay drives the LED strobe from sensor GPIO2;
+  this firmware uses GPIO1 for STROBE and GPIO2 for FSYNC_OUT. Check which
+  sensor GPIOs the P-Board brings out, and swap the roles in `board.h` if
+  needed.
+- **I2C.** The bus is shared with the board's audio codec and touch
+  controller; a scan should find the sensor alone at 0x10.
 - Put level shifters between the sensor's 1.8 V GPIOs and the ESP32-P4.
 
 ## Bring-up order
