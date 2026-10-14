@@ -104,7 +104,10 @@ before connecting it:
   needed.
 - **I2C.** The bus is shared with the board's audio codec and touch
   controller; a scan should find the sensor alone at 0x10.
-- Put level shifters between the sensor's 1.8 V GPIOs and the ESP32-P4.
+- **Level shifting and the IR LED driver:** the sensor's GPIOs run at 1.8 V.
+  Parts and wiring are in
+  [../docs/vd55g1-esp32p4.md](../docs/vd55g1-esp32p4.md) (IR LED driver and
+  level shifting).
 
 ## Bring-up order
 
