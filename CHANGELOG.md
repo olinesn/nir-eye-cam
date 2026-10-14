@@ -80,7 +80,8 @@ To release:
   noise, corner fall-off), signal-to-noise per cell on fluorescent samples
   behind identical optics, two-LED alternation on each sensor, power and heat,
   a results table and decision rules. The winner's ESP32-P4 build is then
-  checked with `nireyecam-bench`.
+  checked with `nireyecam-bench`. The questions for ST and ams are listed with
+  the step each answer affects, and what happens without one.
 
 ## [0.2.0] - 2026-10-14
 

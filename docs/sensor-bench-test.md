@@ -35,6 +35,43 @@ is the comparison that decides.
   15 minutes' warm-up, and each chip's own temperature sensor logged with
   every run.
 
+## Questions for the vendors
+
+These go to ST (VD55G1) and ams OSRAM (Mira050). An answer can settle an item
+before the bench does. The last column says what happens without one: most
+are measured here anyway, and only the hardware questions block the setup.
+
+**Sensor physics.** The bench measures all of these; an answer is a
+cross-check.
+
+| Open item | Ask | Step | Without an answer |
+|---|---|---|---|
+| QE, tabulated 450–700 nm. The VD55G1's is Fig. 21 of DS13604; the Mira050's is not published | Both | 2 | Measured in each emission band |
+| Conversion gain and temporal noise at each gain; dark current at 25 and 40 °C; PRNU and DSNU | Both | 1, 3, 4 | Measured |
+| Binning before or after readout, and a binned pixel's read noise | Both | 1 | Measured: digital 2×2 binning doubles the read noise per binned pixel |
+| Leakage into the stored frame at 550 nm (the VD55G1's figure is at 940 nm only) | ST | 11 | Measured in the worst-case test |
+| The microlenses' chief-ray profile, and the corner response with near-straight light | Both | 5 | Measured |
+| Cover-glass transmission, 450–700 nm | ams | 2 | Included in the measured QE, since the glass stays on |
+
+**Hardware and supply.** These block the setup.
+
+| Open item | Ask | Step | Without an answer |
+|---|---|---|---|
+| A lensless VD55G1: the packaged (ChipPack PLCC) part's drawing, cover glass and MOQ, or whether the CAM-5G1-081CLR's lens comes off | ST | Before you start | Use the STEVAL-55G1MBI's M12 holder |
+| Which silicon cut ships now. Cut 2 needs ST's patch, which the ESP32-P4 firmware does not include | ST | 15 | Read `revision` from `INFO` on arrival |
+| A Mira050 evaluation kit that exposes `TRIG_ILLUM` and the context registers; reference register settings or a driver, and its licence | ams | Before you start, Part 3 | A carrier board for the chip-scale package, configured from the datasheet |
+| Mira050 assembly guidance (reflow profile, underfill); samples below 120; lifecycle and lead time | ams | Before you start | Buy single units from a distributor |
+
+**Alternation.** These decide how Part 3 is run.
+
+| Open item | Ask | Step | Without an answer |
+|---|---|---|---|
+| Does the VD55G1 step through two contexts on its own, with a different STROBE GPIO in each, also in VT-slave (external sync) mode? | ST | 12 | Tested there |
+| Can the Mira050 toggle its contexts every frame without a host write? If not, how late in a frame can the write arrive? | ams | 12 | Find the deadline by moving the write later |
+| Is the active context reported in the frame data? | Both | 10 | Label by the frame counter's parity |
+| A second Mira050 illumination trigger, or a pin that shows the active context | ams | 9 | Route `TRIG_ILLUM` with a host GPIO |
+| External frame start: which edge, the delay and jitter to exposure, and START/STOP with no pulses (the VD55G1's open `EXTSYNC` items) | Both | 15 | Measured by `nireyecam-bench --extsync` |
+
 ## Equipment
 
 | Item | Suggested |
@@ -55,9 +92,12 @@ bands is the number that matters. Measure the irradiance at the sensor plane
 with the power meter.
 
 1. **Photon transfer,** at gain 1× and at the planned working gain: 50
-   exposure steps from dark to saturation, two frames per step, plus 100 dark
-   frames. From mean against variance: conversion gain K (e⁻/DN), read noise
-   (e⁻), saturation capacity (e⁻), and linearity error.
+   exposure steps from dark to saturation, two frames per step, and a dark
+   capture at every exposure. From mean against variance: conversion gain K
+   (e⁻/DN), read noise (e⁻), saturation capacity (e⁻), and linearity error.
+   Repeat it in 2×2 binning. Digital binning sums four pixels' read noise
+   (twice one pixel's); binning before readout adds less. The binned read
+   noise says which each sensor does.
 2. **QE in each band** = mean signal (e⁻) ÷ photons per pixel, where photons
    per pixel = irradiance × pixel area × exposure ÷ (hc/λ).
 3. **Dark current:** exposures from 1 to 1,000 ms, at about 25 °C and at the
@@ -102,14 +142,18 @@ Mira050 pixel 1.74 µm, so **compare per cell, not per pixel:** sum each
    inside its own exposure, and measure the jitter.
 10. **Labelling.** Image a two-colour target (green slide on one half, red on
     the other) for 100,000 frames at 60 fps total. Count frames whose content
-    does not match their label, and any dropped frames.
+    does not match their label, and any dropped frames. If a sensor reports
+    its active context in the frame data, label by that and check it against
+    the parity too.
 11. **Leakage.** On a red-only target, how much signal appears in the blue
     frames, against the red frames? Optional worst case: leave one LED on
     through the other frame's readout, to check the claimed leakage into the
     stored frame (−80 dB at 940 nm for the VD55G1, −120 dB at 550 nm for the
     Mira050).
 12. **Settings per colour.** Check that each context's exposure and gain
-    actually apply, and find the fastest stable alternation rate.
+    actually apply, and find the fastest stable alternation rate. For the
+    Mira050, also find how late in a frame the host's context write can
+    arrive: move it later until frames start being mislabelled.
 
 ## Part 4: power, heat, and the ESP32-P4 build
 
@@ -164,6 +208,10 @@ One manifest row per capture, each of at least 2 frames:
   from that pair.
 - `--crop` limits the statistics to the centre of the frame. The
   corner-to-centre response always uses the whole frame.
+- **Binned captures** (step 1) are rows of their own: give them their own
+  `gain` label, e.g. `1x 2x2`, and the binned pixel pitch in `pixel_um`
+  (4.32 µm for the VD55G1, 5.58 µm for the Mira050), so they are fitted
+  separately and their QE uses the right pixel area.
 
 ### Part 2: `snr`
 
@@ -215,6 +263,7 @@ One column per sensor:
 |---|---|---|
 | Conversion gain (e⁻/DN), at 1× and working gain | | |
 | Read noise (e⁻) | | |
+| Read noise, 2×2 binned (e⁻) | | |
 | Saturation capacity (e⁻) | | |
 | QE through ET525/50m | | |
 | QE through ET630/75m | | |
