@@ -40,7 +40,7 @@
 #include "usb_link.h"
 #include "vd55g1.h"
 
-#define FW_VERSION "0.1.0-p4"
+#define FW_VERSION "0.2.0-p4"
 #define CMD_MAX    96
 #define TEXT_MAX   640
 

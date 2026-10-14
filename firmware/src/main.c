@@ -36,7 +36,7 @@
 #include "nec_protocol.h"
 #include "syncio.h"
 
-#define FW_VERSION "0.1.0"
+#define FW_VERSION "0.2.0"
 
 #define TEXT_SLOTS 4
 #define TEXT_MAX   480

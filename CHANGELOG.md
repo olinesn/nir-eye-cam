@@ -21,6 +21,8 @@ To release:
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-14
+
 ### Added
 
 - ESP32-P4 firmware: `EXTSYNC 1` now works instead of returning an error.
@@ -109,5 +111,6 @@ To release:
   `self._stop`, which shadows a method `Thread.join()` calls on those
   versions. It was pushed to `main` before CI tested older Pythons.
 
-[Unreleased]: https://github.com/olinesn/nir-eye-cam/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/olinesn/nir-eye-cam/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/olinesn/nir-eye-cam/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/olinesn/nir-eye-cam/releases/tag/v0.1.0
