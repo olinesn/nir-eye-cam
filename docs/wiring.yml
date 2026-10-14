@@ -47,10 +47,10 @@ builds:
           1.8 V side from the P-Board's I/O rail, 3.3 V side from the board. Three of its four
           channels: FSYNC, TRIG and STROBE.
       - id: driver
-        name: "IR LED driver: 74HCT08 AND gate + IRLB8721 MOSFET"
+        name: "IR LED driver: 74HCT08 AND gate + IRLB3813PBF MOSFET"
         notes: >-
           Lights the LEDs only while the sensor's STROBE and the board's LED enable are both high.
-          74HCT08 on 5 V; 100 Ω gate resistor; 100 kΩ pull-downs on the gate and on LED enable
+          74HCT08 on 5 V; 220 Ω gate resistor; 100 kΩ pull-downs on the gate and on LED enable
           keep the IR off at power-up. Schematic in docs/vd55g1-esp32p4.md.
       - id: leds
         name: 2 × Vishay TSAL6400 940 nm IR LEDs + series resistor

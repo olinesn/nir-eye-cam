@@ -41,10 +41,10 @@ To release:
 - `docs/vd55g1-esp32p4.md`: an **IR LED driver and level shifting** section
   for the bench prototype. A TXB0104 breakout shifts FSYNC, TRIG and STROBE
   between the sensor's 1.8 V and the ESP32-P4's 3.3 V. A 74HCT08 on 5 V ANDs
-  the sensor's STROBE with the firmware's LED enable and drives an IRLB8721
-  MOSFET, so the IR LEDs (2 × Vishay TSAL6400, 940 nm) light only during
-  exposure and only when the host asked; pull-downs keep them off at
-  power-up. It gives a schematic, parts, resistor values, and the safety
+  the sensor's STROBE with the firmware's LED enable and drives an
+  IRLB3813PBF MOSFET through 220 Ω, so the IR LEDs (2 × Vishay TSAL6400,
+  940 nm) light only during exposure and only when the host asked;
+  pull-downs keep them off at power-up. It gives a schematic, parts, resistor values, and the safety
   rules. The wiring diagram now names these parts.
 
 ### Fixed
