@@ -1,0 +1,10 @@
+# Code owners: GitHub automatically requests a review from these people on
+# any pull request that changes matching paths. Later lines take precedence
+# over earlier ones, so keep the catch-all first and add specific paths after
+# it. Every owner needs write access to the repository.
+#
+# To give an area its own reviewers, add a line below the catch-all, e.g.
+#   /firmware-p4/   @olinesn @a-colleague
+#   /host/          @another-colleague
+
+*   @olinesn
