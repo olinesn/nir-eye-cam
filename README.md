@@ -18,7 +18,8 @@ firmware-p4/  ESP32-P4 firmware (ESP-IDF, C) for the VD55G1 global-shutter
             build: MIPI CSI-2 capture, same protocol (compiles; not yet run)
 common/     nec_protocol.h, the packet format both firmwares share
 host/       Python: nireyecam-record, nireyecam-align, nireyecam-list,
-            plus a simulated camera for testing without hardware
+            nireyecam-bench, plus a simulated camera for testing without
+            hardware
 docs/       hardware.md (parts, wiring, optics, sync, safety, depth),
             protocol.md
 ```
@@ -159,6 +160,34 @@ per camera with:
 - `frames.csv` (device timestamp and sensor frame counter per video frame);
 - `sync.csv`;
 - `frames_aligned.csv` (adds `t_s`, seconds on the shared timeline).
+
+## Check a new camera on the bench
+
+`nireyecam-bench` runs the checks the firmware still needs on real hardware
+and drafts a [Bench test result](.github/ISSUE_TEMPLATE/bench_test.yml)
+issue. Aim the camera at a still, evenly lit scene (white paper under the IR
+LEDs works) and leave it alone for the minute or two the run takes.
+
+```bash
+nireyecam-bench --cam /dev/cu.usbmodem1101 --led 300     # writes bench-report.md
+nireyecam-bench --cam /dev/cu.usbmodem1101 --led 300 --sync --json bench.json
+```
+
+It measures, from the camera's own timestamps:
+- frame rate, jitter and dropped frames at each resolution, once at the
+  default frame length and once at the shortest, which shows how much the
+  USB link carries;
+- exposure linearity and black level;
+- the analog-gain steps against 1x / 2x / 4x / 8x;
+- the IR LEDs' effect on the image (`--led`);
+- with `--sync`, the sync pulses, with SYNC_OUT wired back to SYNC_IN.
+
+On the ESP32-P4, it also checks the sensor's model ID and that `csi_errors`
+stays 0. `--extsync HZ` tests external sync, with TRIG_OUT wired to the
+sensor's GPIO0. The report suggests Confirms or Differs for each item, and
+leaves the numbers-only items, such as frame rate, to you. The camera's
+settings are restored at the end and the IR LEDs left off. Try it with
+`--cam sim`.
 
 ## Test
 

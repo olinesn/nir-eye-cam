@@ -21,6 +21,20 @@ To release:
 
 ## [Unreleased]
 
+### Added
+
+- `nireyecam-bench`: measures one camera on the bench and drafts a **Bench
+  test result** issue. It reports:
+  - frame rate, timing jitter and dropped frames, at the default and the
+    shortest frame length (the second shows what the USB link carries);
+  - exposure linearity and black level;
+  - the analog-gain steps;
+  - the IR LEDs' effect on the image;
+  - the sync loopback and, on the ESP32-P4, the sensor's model ID,
+    `csi_errors` and external sync (`--extsync`).
+
+  Each covered form item gets a suggested result. Works on the simulator.
+
 ## [0.2.0] - 2026-10-14
 
 ### Added
