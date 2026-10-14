@@ -34,7 +34,18 @@ on every pull request.
 
 ## Before you open a pull request
 
-Run what CI runs for the parts you touched:
+Install the pre-commit hooks once per clone. They check whitespace and line
+endings, lint the workflows, validate the config and citation files against
+their schemas, and catch Python bugs (undefined names, unused imports) on
+every commit:
+
+```bash
+pip install pre-commit    # or prefix the commands below with uvx
+pre-commit install
+pre-commit run --all-files   # run them on everything, any time
+```
+
+Then run what CI runs for the parts you touched:
 
 ```bash
 # Host

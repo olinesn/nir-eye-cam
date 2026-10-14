@@ -1,0 +1,61 @@
+# Checks that run on each commit, matching conventions the repo already
+# follows (.editorconfig, .gitattributes, CONTRIBUTING.md). Set up once per
+# clone:
+#   pip install pre-commit    (or run it without installing: uvx pre-commit)
+#   pre-commit install
+# Check everything:   pre-commit run --all-files
+#
+# Hooks are pinned to commits, like the GitHub Actions; the comment names the
+# release. `pre-commit autoupdate --freeze` moves them forward.
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # frozen: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        # Two trailing spaces are a line break in Markdown (.editorconfig).
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: detect-private-key
+
+  # GitHub Actions workflows: logic, expressions and shell steps.
+  - repo: https://github.com/rhysd/actionlint
+    rev: 914e7df21a07ef503a81201c76d2b11c789d3fca  # frozen: v1.7.12
+    hooks:
+      - id: actionlint
+
+  # Config and metadata files, against their official schemas.
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0494aa7fa1314e98913a41227d8f0a515b2c1049  # frozen: 0.38.2
+    hooks:
+      - id: check-github-workflows
+      - id: check-dependabot
+      - id: check-jsonschema
+        name: Validate issue forms
+        files: ^\.github/ISSUE_TEMPLATE/[^/]+\.yml$
+        args: [--builtin-schema, vendor.github-issue-forms]
+      - id: check-jsonschema
+        name: Validate CITATION.cff
+        files: ^CITATION\.cff$
+        types_or: [text]
+        args: [--schemafile, "https://raw.githubusercontent.com/citation-file-format/citation-file-format/1.2.0/schema.json"]
+      - id: check-jsonschema
+        name: Validate .zenodo.json
+        files: ^\.zenodo\.json$
+        args: [--schemafile, "https://raw.githubusercontent.com/zenodo/zenodo/cf5ca46ab0b105f0c831e462a32da684fbae3647/zenodo/modules/deposit/jsonschemas/deposits/records/legacyrecord.json"]
+
+  # Python: bug-catching lint rules only (configured in host/pyproject.toml);
+  # no formatter, so the code's existing layout is left alone.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: a56c0b927e6465d37cae3e97d35d4d18ab2b96cd  # frozen: v0.16.9
+    hooks:
+      - id: ruff-check
