@@ -133,20 +133,20 @@ LED enable are both high, so the IR is off unless the host asked for it.
    1A  ── B3 of the TXB0104 (STROBE)
    1B  ──┬── GPIO32 (J1-26), LED enable
          └── 100 kΩ ── GND
-   1Y  ── 100 Ω ──┬── IRLB8721 gate
+   1Y  ── 220 Ω ──┬── IRLB3813 gate
                   └── 100 kΩ ── GND
    unused inputs (2A 2B 3A 3B 4A 4B) ── GND
 
- IRLB8721:  source ── GND,  drain ── LED cathode end
- 5V (J1-2) ── R ── LED ── LED ── IRLB8721 drain
+ IRLB3813:  source ── GND,  drain ── LED cathode end
+ 5V (J1-2) ── R ── LED ── LED ── IRLB3813 drain
 ```
 
 | Part | Qty | Notes |
 |---|---|---|
 | TXB0104 level-shifter breakout (Adafruit 1875, or SparkFun BOB-11771) | 1 | A side 1.2–3.6 V, B side 1.65–5.5 V: 1.8 V on A, 3.3 V on B. Three of its four channels (FSYNC, TRIG, STROBE). Direction is automatic. |
 | 74HCT08 quad 2-input AND gate, DIP-14 | 1 | On 5 V, so its output turns the MOSFET fully on; its TTL-level inputs (high above 2.0 V) read the 3.3 V signals. Tie the unused inputs to GND; 0.1 µF across its supply. |
-| IRLB8721 N-channel MOSFET, TO-220 | 1 | Gate threshold 1.35–2.35 V; on-resistance at most 16 mΩ at a 4.5 V gate. Far more than two LEDs need. |
-| 100 Ω, and two 100 kΩ resistors | 1 + 2 | Gate resistor; pull-downs on the gate and on LED enable, which keep the IR off while anything is unpowered or booting (GPIO32 floats until the firmware drives it). |
+| Infineon IRLB3813PBF N-channel MOSFET, TO-220 | 1 | Logic level: gate threshold 1.35–2.35 V, so the 74HCT08's 5 V turns it fully on; on-resistance at most 1.95 mΩ. Far more than two LEDs need. Same pin order as the IRLB8721 it replaces (gate, drain, source). |
+| 220 Ω, and two 100 kΩ resistors | 1 + 2 | Gate resistor (see the rules); pull-downs on the gate and on LED enable, which keep the IR off while anything is unpowered or booting (GPIO32 floats until the firmware drives it). |
 | Vishay TSAL6400, 940 nm IR LED (±25°, ~1.35 V) | 2, plus spares | For the CAM-5G1-080NIR (940 nm bandpass). With the clear module, an 850 nm LED and an 830 nm long-pass filter instead. |
 | LED series resistor | 1 | R = (5 V − LEDs × 1.35 V) / current. Two LEDs: 120 Ω for 20 mA, 47 Ω for 50 mA. |
 | 1.8 V for the shifter's A side | | From the P-Board's 1.8 V I/O rail, so the levels match the sensor's. **VERIFY** the P-Board brings it out; if not, a small 3.3 V → 1.8 V regulator. |
@@ -158,6 +158,14 @@ Rules:
   the exposure's share of the frame period.
 - **The two pull-downs stay.** They are what keeps the IR off at power-up,
   before the firmware runs.
+- **220 Ω on the gate.** This design first named the IRLB8721PBF, which is no
+  longer made; the IRLB3813PBF is its recommended substitute. The gate
+  resistor sets the 74HCT08's peak output current: about 35 mA through 100 Ω,
+  over its ±25 mA rating, for as long as the gate takes to charge. That was a
+  fraction of a microsecond for the IRLB8721 (7.6 nC); the IRLB3813 takes
+  about 57 nC, so 220 Ω, which holds the peak near 20 mA. The LEDs still
+  switch in a few microseconds, nothing next to a millisecond exposure.
+  Another logic-level MOSFET works too: size its gate resistor the same way.
 - **No resistors on the TXB0104's channels.** The TXB family is made for
   push-pull signals; strong pull-ups or pull-downs on its lines upset its
   automatic direction sensing.
@@ -254,3 +262,7 @@ were not raw vendor bulk. **VERIFY** by measuring early. The 320 × 320 crop at
 - ST community thread "STEVAL-CAM-M0I pinout compatibility with Raspberry Pi
   CM4" (Oct 2024: the 22-pin output uses the Pi 5 pinout; reset is driven by
   the connector's GPIO)
+- Infineon IRLB3813PbF datasheet (gate threshold, on-resistance, gate charge);
+  Digi-Key's IRLB8721PBF listing (obsolete, with the IRLB3813PBF as the
+  manufacturer's recommended substitute); TI SN74HCT08 datasheet (output
+  current)
