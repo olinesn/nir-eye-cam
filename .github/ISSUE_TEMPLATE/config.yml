@@ -1,0 +1,10 @@
+# The "new issue" chooser. Issues start from one of the forms in this folder;
+# people with write access still get a "Blank issue (Maintainers only)" option.
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question
+    url: https://github.com/olinesn/nir-eye-cam/discussions/categories/q-a
+    about: Questions about building, flashing or using the cameras go in Discussions > Q&A.
+  - name: Report a security problem
+    url: https://github.com/olinesn/nir-eye-cam/blob/main/SECURITY.md
+    about: Security problems, and IR LEDs that stay on when they shouldn't, are reported privately. Don't open an issue for them.

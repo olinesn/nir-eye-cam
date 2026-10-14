@@ -42,7 +42,12 @@ repos:
       - id: check-jsonschema
         name: Validate issue forms
         files: ^\.github/ISSUE_TEMPLATE/[^/]+\.yml$
+        exclude: ^\.github/ISSUE_TEMPLATE/config\.yml$
         args: [--builtin-schema, vendor.github-issue-forms]
+      - id: check-jsonschema
+        name: Validate issue chooser config
+        files: ^\.github/ISSUE_TEMPLATE/config\.yml$
+        args: [--builtin-schema, vendor.github-issue-config]
       - id: check-jsonschema
         name: Validate discussion forms
         files: ^\.github/DISCUSSION_TEMPLATE/[^/]+\.yml$
