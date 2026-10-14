@@ -173,8 +173,8 @@ See [CHANGELOG.md](CHANGELOG.md) for what has changed, and
 
 ## License
 
-MIT; see [LICENSE](LICENSE). Third-party code included here keeps its own
-license:
+MIT, copyright The Trustees of Princeton University; see [LICENSE](LICENSE).
+Third-party code included here keeps its own license:
 
 - `firmware/src/camera.c` adapts the sensor setup and PIO program from Arm's
   [hm01b0-library-for-pico](https://github.com/ArmDeveloperEcosystem/hm01b0-library-for-pico)
