@@ -1,0 +1,53 @@
+# Marks issues stale after 90 days without activity and closes them 14 days
+# later unless someone comments or removes the label. Deliberately gentle:
+# - issues only; pull requests (Dependabot's included) are never touched;
+# - never touches bench-test results (records, not open problems), feature
+#   requests (`enhancement`), or issues someone is assigned to.
+# Run it by hand from the Actions tab: by default a manual run is a dry run
+# that only logs what it would do.
+
+name: Stale issues
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"   # Mondays 06:17 UTC
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Only log what would happen; change nothing
+        type: boolean
+        default: true
+
+permissions:
+  actions: write       # the action keeps its state in the Actions cache
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: stale
+  cancel-in-progress: false
+
+jobs:
+  stale:
+    name: Mark and close stale issues
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93 # v11.0.0
+        with:
+          days-before-issue-stale: 90
+          days-before-issue-close: 14
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
+          stale-issue-label: stale
+          exempt-issue-labels: bench-test,enhancement
+          exempt-all-issue-assignees: true
+          # Scheduled runs act; a manual run only logs unless dry-run is off.
+          debug-only: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run }}
+          stale-issue-message: >
+            This issue has had no activity for 90 days, so it has been marked
+            stale. It will be closed in 14 days unless someone comments or
+            removes the `stale` label. If it still matters, a short comment
+            saying so is enough.
+          close-issue-message: >
+            Closed after 104 days without activity. If this still matters,
+            reopen it or open a new issue that links here.
