@@ -75,15 +75,20 @@ the cap.
 
 ## Synchronization
 
-From the VD55G1 Linux driver (`drivers/media/i2c/vd55g1.c`) and ST's
-integration manual UM3224:
+From the VD55G1 Linux drivers (mainline `drivers/media/i2c/vd55g1.c` and
+ST's own `vd55g1-linux-driver`) and ST's integration manual UM3224:
 
-- Each GPIO can be **FSYNC_OUT** (0x00), **input** (0x01) or **STROBE**
-  (0x02), set per context in `GPIO_0_CTRL` (0x051D + 0x50 × ctx).
-- **Only GPIO0 can be the EXTERNAL_SYNC input** (UM3224). **VERIFY**: the
-  Linux driver does not implement external-sync input mode, so the register
-  sequence and timing must come from UM3224 / the datasheet. This is the one
-  thing everything else depends on. Test it first (phase 0).
+- Each GPIO can be **FSYNC_OUT** (0x00), **input** (0x01), **STROBE** (0x02)
+  or **VT slave** (0x0A, GPIO0 only), set per context in `GPIO_0_CTRL`
+  (0x051D + 0x50 × ctx).
+- **Only GPIO0 can be the EXTERNAL_SYNC input** (UM3224), which calls this
+  "VT slave" mode. ST's own Linux driver (not the mainline one) enables it in
+  standby: GPIO0's mode = 0x0A, then `VT_CTRL` (0x0309) = 1. `EXTSYNC 1`
+  does the same. `FRAME_LENGTH` still caps the frame rate, so the frame
+  period must be shorter than the trigger period. **VERIFY**: which edge
+  starts a frame, the delay from it to the start of exposure, and that
+  START and STOP complete with no pulses arriving. This is the one thing
+  everything else depends on. Test it first (phase 0).
 
 Plan:
 
@@ -116,10 +121,12 @@ them and the ESP32-P4, and make the LED MOSFET's gate threshold safe at 1.8 V
   - crop: X start/width `0x0514`/`0x0516`, Y start/height `0x0510`/`0x0512`;
   - manual exposure `0x0502`, analog gain `0x0501`.
 
-  **Revision-2 silicon needs a firmware patch blob** written to `0x2000`
-  before boot; revision 3 does not. The Linux driver carries that blob but is
-  GPL-2.0. ST's STM32 camera middleware also supports this module, so check
-  its license as a source instead.
+  **Cut-2 silicon needs a firmware patch blob** written to `0x2000` before
+  boot; cut 3 does not, in ST's STM32 camera middleware. **VERIFY**: the
+  mainline Linux driver patches every VD55G1. Both cuts report model ID
+  `0x53354731`; the cut is in `0x0004` (`0x2020` = cut 2, `0x3030` = cut 3).
+  The Linux driver carries the blob but is GPL-2.0. ST's STM32 camera
+  middleware carries it too, so check its license as a source instead.
 - **Capture:** `esp_cam_ctlr_csi` with `data_lane_num = 1`,
   `input_data_color_type = CAM_CTLR_COLOR_RAW8`. **VERIFY** that the CSI path
   can hand RAW8 to memory unconverted: Espressif's example converts RAW8 →
@@ -169,6 +176,10 @@ were not raw vendor bulk. **VERIFY** by measuring early. The 320 × 320 crop at
 - ST CAM-55G1 data brief DB5267 rev 2 (module optics, sizes, connector, rails)
 - ST VD55G1 datasheet; UM3224 "How to integrate and configure the VD55G1 sensor"
 - Linux `drivers/media/i2c/vd55g1.c` (register map, GPIO modes, boot/patch)
+- ST `vd55g1-linux-driver` on GitHub (VT slave mode: GPIO0 mode 0x0A,
+  `VT_CTRL` 0x0309)
+- ST `stm32-mw-camera` on GitHub, `sensors/vd55g1` (model ID, silicon cut,
+  which cut needs the patch)
 - ST STEVAL-CAM-M0I (P-Board)
 - ESP-IDF camera controller driver docs (ESP32-P4); esp_video UVC example
 - Waveshare ESP32-P4-NANO docs

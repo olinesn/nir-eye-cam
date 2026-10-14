@@ -15,7 +15,7 @@
 //   LED <0-1000>     IR enable: >0 lets the sensor's STROBE drive the LEDs
 //   SYNCGEN <0|1>    drive SYNC_OUT with the random pulse train
 //   TRIG <hz>        frame trigger on TRIG_OUT for every sensor's GPIO0 (0 = off)
-//   EXTSYNC <0|1>    start frames on GPIO0 edges (not implemented yet: see vd55g1.c)
+//   EXTSYNC <0|1>    start each frame on a GPIO0 pulse, not the sensor's timer (stopped only)
 //
 // Every command gets one reply, "OK <CMD> ..." or "ERR <CMD> <reason>". If the
 // host closes the port, streaming stops and the IR is disabled.
@@ -51,7 +51,6 @@ static esp_err_t s_cam_err = ESP_FAIL;
 static char s_uid[13];
 static QueueHandle_t s_cmd_q;
 static uint32_t s_text_seq;
-static bool s_extsync;
 
 // ------------------------------------------------------------- outgoing
 
@@ -133,18 +132,18 @@ static int reply_info(void)
 {
     bool ok = cam_ok();
     return reply("OK INFO {\"fw\":\"%s\",\"board\":\"%s\",\"uid\":\"%s\",\"sensor\":\"vd55g1\","
-          "\"model_id\":\"0x%08lx\",\"cam_ok\":%d,\"cam_error\":\"%s\","
+          "\"model_id\":\"0x%08lx\",\"revision\":\"0x%04x\",\"cam_ok\":%d,\"cam_error\":\"%s\","
           "\"width\":%u,\"height\":%u,\"x\":%u,\"y\":%u,\"exposure\":%u,\"frame_length\":%u,"
           "\"line_time_ns\":%lu,\"frame_period_us\":%lu,\"again\":%u,\"dgain\":%u,\"ae\":%d,"
           "\"led\":%d,\"syncgen\":%d,\"trig_hz\":%lu,\"extsync\":%d,\"streaming\":%d,"
           "\"slots\":%lu,\"csi_errors\":%lu,\"sync_edges\":%lu,\"sync_overflows\":%lu}",
-          FW_VERSION, NEC_BOARD_NAME, s_uid, (unsigned long)s_sensor.model_id, ok,
+          FW_VERSION, NEC_BOARD_NAME, s_uid, (unsigned long)s_sensor.model_id, (unsigned)s_sensor.revision, ok,
           ok ? "" : esp_err_to_name(s_cam_err), s_sensor.w, s_sensor.h, s_sensor.x, s_sensor.y,
           s_sensor.exposure, s_sensor.frame_length,
           (unsigned long)(ok ? vd55g1_line_time_ns(&s_sensor) : 0),
           (unsigned long)(ok ? vd55g1_frame_period_us(&s_sensor) : 0), s_sensor.again,
           s_sensor.dgain, s_sensor.ae, led_enabled(), syncgen_on(), (unsigned long)trig_hz(),
-          s_extsync, s_sensor.streaming, (unsigned long)capture_slots(),
+          s_sensor.extsync, s_sensor.streaming, (unsigned long)capture_slots(),
           (unsigned long)capture_errors(), (unsigned long)sync_edge_count(),
           (unsigned long)sync_overflows());
 }
@@ -173,7 +172,7 @@ static esp_err_t open_camera(void)
                                 PIN_XSHUTDOWN, SENSOR_EXT_CLK_HZ, MIPI_LANE_MBPS);
     if (err == ESP_OK) err = vd55g1_set_io(&s_sensor, SENSOR_IO_STROBE, VD55G1_IO_STROBE);
     if (err == ESP_OK) err = vd55g1_set_io(&s_sensor, SENSOR_IO_FSYNC_OUT, VD55G1_IO_FSYNC_OUT);
-    if (err == ESP_OK) err = vd55g1_set_io(&s_sensor, SENSOR_IO_EXTSYNC, VD55G1_IO_INPUT);
+    if (err == ESP_OK) err = vd55g1_set_external_sync(&s_sensor, false);  // free-run until EXTSYNC 1
     if (err == ESP_OK) err = vd55g1_set_ae(&s_sensor, false);
     if (err == ESP_OK) err = capture_init(s_sensor.w, s_sensor.h, MIPI_LANES, MIPI_LANE_MBPS);
     return err;
@@ -271,10 +270,9 @@ static int handle_command(char* cmdline)
     }
     if (!strcmp(cmd, "EXTSYNC")) {
         if (!parse_uint(arg, 1, &v)) return reply("ERR EXTSYNC expected 0 or 1");
+        if (s_sensor.streaming) return reply("ERR EXTSYNC stop first");
         err = vd55g1_set_external_sync(&s_sensor, v != 0);
-        if (err) return reply("ERR EXTSYNC %s", esp_err_to_name(err));
-        s_extsync = v != 0;
-        return reply("OK EXTSYNC %d", s_extsync);
+        return err ? reply("ERR EXTSYNC %s", esp_err_to_name(err)) : reply("OK EXTSYNC %d", s_sensor.extsync);
     }
     return reply("ERR %s unknown command", cmd);
 }

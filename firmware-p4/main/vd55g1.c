@@ -14,6 +14,7 @@ static const char* TAG = "vd55g1";
 // Register addresses are 16-bit, sent MSB first; multi-byte VALUES are
 // little-endian (the opposite of the Himax sensors).
 #define REG_MODEL_ID              0x0000  // 32
+#define REG_REVISION              0x0004  // 16, silicon cut
 #define REG_SYSTEM_FSM            0x001C  // 8
 #define REG_BOOT                  0x0200  // 8
 #define REG_STBY                  0x0201  // 8
@@ -21,6 +22,7 @@ static const char* TAG = "vd55g1";
 #define REG_EXT_CLOCK             0x0220  // 32, Hz
 #define REG_MIPI_DATA_RATE        0x0224  // 32, bit/s
 #define REG_LINE_LENGTH           0x0300  // 16
+#define REG_VT_CTRL               0x0309  // 8, 1 = frames start on GPIO0 (VT slave)
 #define REG_FORMAT_CTRL           0x030A  // 8, bits per pixel
 #define REG_OIF_CTRL              0x030C  // 16, lane polarities
 #define REG_OIF_IMG_CTRL          0x030F  // 8, CSI-2 data type
@@ -49,8 +51,11 @@ static const char* TAG = "vd55g1";
 #define FSM_SW_STBY       0x02
 #define FSM_STREAMING     0x03
 
-#define MODEL_ID_REV2 0x53354731  // "S5G1": needs ST's firmware patch before boot
-#define MODEL_ID_REV3 0x53354733  // "S5G3": boots as is
+// Every VD55G1 reads "S5G1"; "S5G3" (0x53354733) is the VD55G4 / VD65G4. The
+// silicon cut is in REG_REVISION (ST's STM32 camera middleware, sensors/vd55g1).
+#define MODEL_ID_VD55G1 0x53354731
+#define REVISION_CUT2   0x2020  // needs ST's firmware patch before boot
+#define REVISION_CUT3   0x3030  // boots as is
 
 #define EXP_MODE_AUTO   0
 #define EXP_MODE_MANUAL 2
@@ -159,21 +164,30 @@ esp_err_t vd55g1_open(vd55g1_t* s, int sda, int scl, uint8_t addr, uint32_t i2c_
 
     ESP_RETURN_ON_ERROR(poll(s, REG_SYSTEM_FSM, FSM_READY_TO_BOOT, 500), TAG, "sensor not ready to boot (I2C/power/clock?)");
     ESP_RETURN_ON_ERROR(rd(s, REG_MODEL_ID, &s->model_id, 4), TAG, "model id");
-    ESP_LOGI(TAG, "model id 0x%08lx", (unsigned long)s->model_id);
+    uint32_t rev = 0;
+    ESP_RETURN_ON_ERROR(rd(s, REG_REVISION, &rev, 2), TAG, "revision");
+    s->revision = (uint16_t)rev;
+    ESP_LOGI(TAG, "model id 0x%08lx, revision 0x%04x", (unsigned long)s->model_id, (unsigned)s->revision);
 
     ESP_RETURN_ON_ERROR(wr(s, REG_EXT_CLOCK, ext_clk_hz, 4), TAG, "ext clock");
 
-    if (s->model_id == MODEL_ID_REV2) {
-        // Rev 2 silicon needs ST's firmware patch written at 0x2000 and then
-        // BOOT = 2. The blob is not included (the only public copy is in the
-        // GPL Linux driver); get it from ST.
-        ESP_LOGE(TAG, "rev 2 sensor: needs ST firmware patch, not included");
-        return ESP_ERR_NOT_SUPPORTED;
-    }
-    if (s->model_id != MODEL_ID_REV3) {
+    if (s->model_id != MODEL_ID_VD55G1) {
         ESP_LOGE(TAG, "not a VD55G1");
         return ESP_ERR_NOT_FOUND;
     }
+    if (s->revision == REVISION_CUT2) {
+        // Cut 2 needs ST's firmware patch written at 0x2000 and then BOOT = 2.
+        // The blob is not included; ST publishes it in its STM32 camera
+        // middleware and its Linux drivers.
+        ESP_LOGE(TAG, "cut 2 sensor: needs ST firmware patch, not included");
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    if (s->revision != REVISION_CUT3) {
+        ESP_LOGE(TAG, "unknown VD55G1 revision");
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    // Cut 3 boots without the patch, as in ST's STM32 middleware. VERIFY: the
+    // mainline Linux driver patches every VD55G1, whatever its cut.
     ESP_RETURN_ON_ERROR(wr(s, REG_BOOT, 1, 1), TAG, "boot");
     ESP_RETURN_ON_ERROR(poll(s, REG_BOOT, 0, 500), TAG, "boot ack");
     ESP_RETURN_ON_ERROR(poll(s, REG_SYSTEM_FSM, FSM_SW_STBY, 500), TAG, "standby");
@@ -263,10 +277,13 @@ esp_err_t vd55g1_set_io(vd55g1_t* s, unsigned io, vd55g1_io_mode_t mode)
 
 esp_err_t vd55g1_set_external_sync(vd55g1_t* s, bool on)
 {
-    // TODO(UM3224): configure GPIO0 as EXTERNAL_SYNC and switch frame start
-    // to it. Until then the sensor free-runs on its own timer.
-    (void)s;
-    return on ? ESP_ERR_NOT_SUPPORTED : ESP_OK;
+    // The sequence ST's own Linux driver uses: GPIO0's role, then VT_CTRL,
+    // and neither while streaming. Only GPIO0 can be the sync input (UM3224).
+    ESP_RETURN_ON_FALSE(!s->streaming, ESP_ERR_INVALID_STATE, TAG, "stop first");
+    ESP_RETURN_ON_ERROR(vd55g1_set_io(s, 0, on ? VD55G1_IO_VT_SLAVE : VD55G1_IO_INPUT), TAG, "gpio0");
+    ESP_RETURN_ON_ERROR(wr(s, REG_VT_CTRL, on ? 1 : 0, 1), TAG, "vt ctrl");
+    s->extsync = on;
+    return ESP_OK;
 }
 
 esp_err_t vd55g1_start(vd55g1_t* s)

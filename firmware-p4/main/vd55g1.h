@@ -1,8 +1,11 @@
 // ST VD55G1 (804 x 704 mono global shutter) over I2C.
 //
-// Written from the register map and sequences in ST's documentation and the
-// mainline Linux driver (drivers/media/i2c/vd55g1.c, used as a reference for
-// register addresses and values; no code copied).
+// Written from the register map and sequences in ST's documentation, the
+// mainline Linux driver (drivers/media/i2c/vd55g1.c) and ST's own Linux
+// driver (github.com/STMicroelectronics/vd55g1-linux-driver), both used as a
+// reference for register addresses and values; no code copied. The model and
+// revision IDs follow ST's STM32 camera middleware
+// (github.com/STMicroelectronics/stm32-mw-camera, sensors/vd55g1).
 
 #pragma once
 
@@ -19,12 +22,14 @@ typedef enum {
     VD55G1_IO_FSYNC_OUT = 0x00,
     VD55G1_IO_INPUT     = 0x01,
     VD55G1_IO_STROBE    = 0x02,
+    VD55G1_IO_VT_SLAVE  = 0x0A,  // GPIO0 only; set by vd55g1_set_external_sync()
 } vd55g1_io_mode_t;
 
 typedef struct {
     i2c_master_bus_handle_t bus;
     i2c_master_dev_handle_t dev;
     uint32_t model_id;
+    uint16_t revision;        // silicon cut: 0x3030 = cut 3
     uint32_t ext_clk_hz;
     uint32_t mipi_bps;
     uint32_t pixel_clock_hz;
@@ -36,6 +41,7 @@ typedef struct {
     uint8_t again;            // 0..28; gain = 32 / (32 - again)
     uint16_t dgain;           // 256 = 1x
     bool ae;
+    bool extsync;             // frames start on GPIO0 pulses
     bool streaming;
 } vd55g1_t;
 
@@ -54,9 +60,12 @@ esp_err_t vd55g1_set_dgain(vd55g1_t* s, uint16_t gain_q8);
 esp_err_t vd55g1_set_ae(vd55g1_t* s, bool on);
 esp_err_t vd55g1_set_io(vd55g1_t* s, unsigned io, vd55g1_io_mode_t mode);
 
-// Frames start on edges at GPIO0 instead of the internal timer.
-// NOT IMPLEMENTED: the register sequence is in ST UM3224 and is not in the
-// Linux driver. Returns ESP_ERR_NOT_SUPPORTED until it is filled in.
+// External sync ("VT slave" mode): each pulse on GPIO0 starts one frame,
+// instead of the sensor's own timer. Off puts GPIO0 back to a plain input.
+// Standby only. FRAME_LENGTH still caps the frame rate (ST UM3224), so keep
+// the frame period shorter than the pulse period, or pulses are missed.
+// VERIFY on hardware: which edge starts a frame, the delay from it to the
+// start of exposure, and that START and STOP complete with no pulses coming.
 esp_err_t vd55g1_set_external_sync(vd55g1_t* s, bool on);
 
 esp_err_t vd55g1_start(vd55g1_t* s);
