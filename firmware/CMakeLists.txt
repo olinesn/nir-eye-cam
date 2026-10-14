@@ -24,7 +24,7 @@ add_executable(nir_eye_cam
     src/usb_descriptors.c
 )
 
-target_include_directories(nir_eye_cam PRIVATE src)
+target_include_directories(nir_eye_cam PRIVATE src ${CMAKE_CURRENT_LIST_DIR}/../common)
 target_compile_options(nir_eye_cam PRIVATE -Wall -Wextra -Wno-unused-parameter)
 
 if(NEC_BOARD STREQUAL "xiao")

@@ -1,4 +1,4 @@
-"""Wire format shared with the firmware (firmware/src/protocol.h, docs/protocol.md).
+"""Wire format shared with the firmware (common/nec_protocol.h, docs/protocol.md).
 
 Device -> host is a stream of packets: a 32-byte little-endian header, then
 ``payload_len`` bytes. Host -> device is newline-terminated ASCII commands.
@@ -21,7 +21,8 @@ TYPES = (FRAME, SYNC, TEXT)
 
 FLAG_AE = 0x01
 
-MAX_FRAME_BYTES = 320 * 320
+MAX_FRAME_DIM = 1024  # RP2040 build: up to 320; ESP32-P4/VD55G1 build: up to 804x704
+MAX_FRAME_BYTES = MAX_FRAME_DIM * MAX_FRAME_DIM
 MAX_TEXT_BYTES = 4096
 
 
@@ -70,7 +71,7 @@ def _plausible(type: int, header_size: int, payload_len: int, width: int, height
     if header_size != HEADER_SIZE or type not in TYPES:
         return False
     if type == FRAME:
-        return 0 < width <= 320 and 0 < height <= 320 and payload_len == width * height
+        return 0 < width <= MAX_FRAME_DIM and 0 < height <= MAX_FRAME_DIM and payload_len == width * height
     if type == SYNC:
         return payload_len == 0
     return payload_len <= MAX_TEXT_BYTES

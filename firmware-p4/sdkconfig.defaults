@@ -1,0 +1,20 @@
+CONFIG_IDF_TARGET="esp32p4"
+
+# Frame buffers live in PSRAM.
+CONFIG_SPIRAM=y
+
+CONFIG_FREERTOS_HZ=1000
+
+# USB: one CDC serial interface on the high-speed port (esp_tinyusb's default
+# port on the ESP32-P4). The host finds cameras by the product string.
+CONFIG_TINYUSB_CDC_ENABLED=y
+CONFIG_TINYUSB_CDC_COUNT=1
+CONFIG_TINYUSB_CDC_RX_BUFSIZE=512
+CONFIG_TINYUSB_CDC_TX_BUFSIZE=16384
+# esp_tinyusb's Kconfig: "Set to 8192 for best performance."
+CONFIG_TINYUSB_CDC_EP_BUFSIZE=8192
+CONFIG_TINYUSB_DESC_MANUFACTURER_STRING="nir-eye-cam"
+CONFIG_TINYUSB_DESC_PRODUCT_STRING="NIR Eye Cam"
+CONFIG_TINYUSB_DESC_CDC_STRING="NIR Eye Cam CDC"
+# Empty = serial number from the chip's eFuse MAC, unique per board.
+CONFIG_TINYUSB_DESC_SERIAL_STRING=""

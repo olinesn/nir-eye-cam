@@ -148,7 +148,8 @@ def configure(cam: Camera, args, master: bool) -> dict:
     info = cam.info()
     if not info.get("cam_ok"):
         raise CameraError(f"{cam.name}: sensor not ready: {info.get('cam_error')}")
-    cam.command(f"RES {args.res}")
+    if args.res:
+        cam.command(f"RES {args.res}")
     if args.fll is not None:
         cam.command(f"FLL {args.fll}")
     if args.exp is not None:
@@ -223,7 +224,7 @@ def run(args) -> int:
         for cam in cams:
             infos[cam.name] = configure(cam, args, master=cam.name == master)
             print(f"{cam.name}: {infos[cam.name]['board']} {infos[cam.name]['uid']} "
-                  f"{args.res} exp={infos[cam.name]['exposure']} lines")
+                  f"{infos[cam.name]['width']}x{infos[cam.name]['height']} exp={infos[cam.name]['exposure']} lines")
         for cam in cams:
             rec = CameraRecorder(cam, out / cam.name, fmt, args.nominal_fps)
             rec.start()
@@ -349,16 +350,26 @@ def list_main(argv: list[str] | None = None) -> int:
     return 0
 
 
+def _res_arg(text: str) -> str:
+    w, sep, h = text.lower().partition("x")
+    if not (sep and w.isdigit() and h.isdigit()):
+        raise argparse.ArgumentTypeError("expected WxH, e.g. 320x320")
+    return f"{int(w)}x{int(h)}"
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0],
                                  formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
     ap.add_argument("--out", type=Path, required=True, help="session folder")
     ap.add_argument("--cam", action="append", required=True, metavar="NAME=PORT",
                     help="camera serial port (or 'sim'); repeat for each camera")
-    ap.add_argument("--res", default="160x120", choices=["160x120", "320x240", "320x320"])
+    ap.add_argument("--res", type=_res_arg, metavar="WxH",
+                    help="frame size (default: keep the device's). RP2040: 160x120, 320x240, 320x320; "
+                         "ESP32-P4/VD55G1: any centred crop up to 804x704 with W*H a multiple of 8")
     ap.add_argument("--exp", type=int, help="exposure in sensor lines (default: firmware default)")
     ap.add_argument("--fll", type=int, help="frame length in lines; raise it to lower the frame rate")
-    ap.add_argument("--gain", type=int, default=0, choices=[0, 1, 2, 3], help="analog gain 1x/2x/4x/8x")
+    ap.add_argument("--gain", type=int, default=0,
+                    help="analog gain code. RP2040: 0-3 = 1x/2x/4x/8x; VD55G1: 0-28, gain = 32/(32-code)")
     ap.add_argument("--ae", action="store_true", help="sensor auto exposure (avoid for pupil size)")
     ap.add_argument("--led", type=int, default=0, help="IR LED duty 0-1000 (default off)")
     ap.add_argument("--sync-master", help="camera that drives the sync line (default: the first, if >1 camera)")

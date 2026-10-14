@@ -1,4 +1,5 @@
-// Wire format between the camera and the host. Mirrored by
+// Wire format between the camera and the host, shared by both firmwares
+// (firmware/ for the RP2040, firmware-p4/ for the ESP32-P4). Mirrored by
 // host/nireyecam/protocol.py and documented in docs/protocol.md -- change all
 // three together.
 //

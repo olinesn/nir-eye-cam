@@ -33,7 +33,7 @@
 
 #include "board_pins.h"
 #include "camera.h"
-#include "protocol.h"
+#include "nec_protocol.h"
 #include "syncio.h"
 
 #define FW_VERSION "0.1.0"

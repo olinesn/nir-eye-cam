@@ -5,7 +5,7 @@ number = the board's unique ID). Baud rate is ignored. The firmware streams
 only while the host holds DTR (pyserial does by default). When DTR drops it
 stops streaming and switches the IR LED off.
 
-Defined in `firmware/src/protocol.h` and `host/nireyecam/protocol.py`.
+Defined in `common/nec_protocol.h` (both firmwares) and `host/nireyecam/protocol.py`.
 Change both together.
 
 ## Device → host: packets
@@ -50,3 +50,21 @@ ASCII lines ending in `\n`. Each gets exactly one text reply,
 | `START` / `STOP` | stream frames |
 
 Replies are sent between packets, never inside a frame.
+
+### ESP32-P4 / VD55G1 build
+
+Same packets and the same commands, with these differences
+(`firmware-p4/main/main.c`):
+
+| Command | Difference |
+|---|---|
+| `RES <W>x<H>` | any centred crop up to 804×704, W×H a multiple of 8 |
+| `ROI <X> <Y>` | new: move the crop (stopped only) |
+| `AGAIN <0-28>` | VD55G1 gain code: gain = 32 / (32 − code) |
+| `DGAIN <q8>` | new: digital gain, 256 = 1× |
+| `LED <0-1000>` | on/off: any value above 0 lets the sensor's STROBE drive the LEDs |
+| `TRIG <hz>` | new: frame-trigger square wave on TRIG_OUT (0 = off) |
+| `EXTSYNC <0\|1>` | new: start frames on the sensor's GPIO0 (not implemented yet) |
+
+`INFO` adds `sensor`, `model_id`, `x`, `y`, `line_time_ns`,
+`frame_period_us`, `dgain`, `trig_hz`, `extsync` and `csi_errors`.
