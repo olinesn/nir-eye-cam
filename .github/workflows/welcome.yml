@@ -1,0 +1,46 @@
+# Welcomes people on their first issue or first pull request in this repo
+# (actions/first-interaction). Bots, the owner and collaborators are skipped:
+# the welcome is for outside contributors, so while the repository is
+# private it has no one to greet. pull_request_target gives the comment
+# permission on pull requests from forks; nothing here checks out or runs
+# the pull request's code.
+
+name: Welcome
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  welcome:
+    name: Welcome first-time contributors
+    runs-on: ubuntu-24.04
+    if: >-
+      !endsWith(github.actor, '[bot]') &&
+      !contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'),
+                github.event.issue.author_association || github.event.pull_request.author_association)
+    steps:
+      - uses: actions/first-interaction@1c4688942c71f71d4f5502a26ea67c331730fa4d # v3.1.0
+        with:
+          issue_message: |
+            Thanks for opening your first issue in nir-eye-cam! A few things that help:
+
+            - If this is a question rather than a bug, [Discussions > Q&A](https://github.com/olinesn/nir-eye-cam/discussions/categories/q-a) is the better place for it.
+            - For a hardware problem, say whether it also happens with the simulated camera (`--cam test=sim`). That tells us right away whether to look at the hardware or the software.
+            - [SUPPORT.md](https://github.com/olinesn/nir-eye-cam/blob/main/SUPPORT.md) lists where each kind of request goes. Help is best-effort, so a reply may take a little while.
+
+            Everyone taking part is expected to follow the [Code of Conduct](https://github.com/olinesn/nir-eye-cam/blob/main/CODE_OF_CONDUCT.md).
+          pr_message: |
+            Thanks for your first pull request to nir-eye-cam! While it waits for review:
+
+            - CI runs the pre-commit checks on every pull request, and builds the firmware or runs the host tests when those change. The checklist in the description mirrors [CONTRIBUTING.md](https://github.com/olinesn/nir-eye-cam/blob/main/CONTRIBUTING.md).
+            - `pre-commit install` runs the same checks on every commit, so they pass before you push.
+            - Not tested on real hardware? That's fine: just say so under "Tested on hardware?".
+
+            Everyone taking part is expected to follow the [Code of Conduct](https://github.com/olinesn/nir-eye-cam/blob/main/CODE_OF_CONDUCT.md).
