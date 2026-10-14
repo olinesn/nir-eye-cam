@@ -30,8 +30,10 @@ Please include:
 - steps to reproduce;
 - what an attacker could do with it.
 
-The maintainers will acknowledge the report and keep you updated while it is
-investigated and fixed.
+The maintainers will acknowledge your report within one week, and keep you
+updated while it is investigated and fixed. If you have not heard back after a
+week, open a public issue saying only that you sent a security report, with
+no details, so it does not go unnoticed.
 
 ## What to report privately
 
