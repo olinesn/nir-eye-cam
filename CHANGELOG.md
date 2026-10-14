@@ -64,6 +64,16 @@ To release:
   lists filter sets and indicator crosstalk, and compares candidate sensors
   (VD55G1, ams Mira050/Mira220, Sony IMX900 and IMX662, PYTHON480) per cell
   of tissue. Design only; open questions are marked VERIFY.
+- `nireyecam-sensortest`: analyses the sensor bench test from recorded
+  frames, EMVA 1288-style. `ptc`: conversion gain, read noise, saturation
+  capacity, linearity, QE per emission band, dark current, DSNU / PRNU (after
+  removing the shading) and the corner-to-centre response, from a manifest of
+  light and dark captures. `snr`: signal-to-noise per cell-sized region over
+  the same piece of sample for every sensor, the excitation power that
+  reaches a target SNR, drift, and the detectability of a small LED step.
+  `alternation`: frame colour labels against content, dropped frames, and
+  leakage into the other colour's frames. Tested against synthetic sensors
+  with known parameters.
 - `docs/sensor-bench-test.md`: the bench test plan for choosing between the
   VD55G1 and the Mira050. Lensless EMVA 1288-style measurements (photon
   transfer, QE through the real emission filters, dark current, fixed-pattern
