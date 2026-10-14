@@ -167,6 +167,12 @@ cd host && pip install -e '.[test]' && pytest
 GitHub Actions runs these on Python 3.9 and 3.14 whenever `host/` changes
 ([.github/workflows/host.yml](.github/workflows/host.yml)).
 
+## Getting help
+
+[SUPPORT.md](SUPPORT.md) says where each kind of request goes: questions to
+Discussions > Q&A; bugs, ideas and bench-test results to the issue forms;
+security problems privately.
+
 ## Citing
 
 If you use nir-eye-cam in your work, please cite it. The citation details are
