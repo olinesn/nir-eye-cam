@@ -46,13 +46,33 @@ In short:
 | Used by | nVue; Barbera et al. 2024 | Dong et al. 2025; Zhang et al. 2026; Doric |
 | Frame rate per colour | Half | Full, and simultaneous |
 | Green/red focus difference | An electrowetting lens switched every frame (Barbera does this), or a compromise focal plane | Each sensor slides to its own image plane |
-| Hardware here | One sensor + one ESP32-P4 | Two of each: the P4 has one CSI-2 input, so two tethers |
+| Hardware here | One sensor + one ESP32-P4 | Two of each: the P4 has one CSI-2 input, so two tethers (see below) |
 
 **Start with A.** It is the trade-off the nVue makes, and it needs nothing
 beyond one camera unit. B is the upgrade if the two colours must be
 simultaneous. `nireyecam-align` already puts two cameras on one timeline, and
 `EXTSYNC` is meant to start their exposures together (not yet run on
 hardware).
+
+### On a freely moving animal
+
+[vd55g1-fpdlink.md](vd55g1-fpdlink.md) is the tether for this. Only the
+sensor and a DS90UB953 serializer ride on the head. One thin coax, through two
+of the rig joint's four free contacts, carries power, video, I²C and GPIO to a
+deserializer and the ESP32-P4 at the base, as the UCLA Miniscope V4's single
+coax does. For the miniscope:
+
+- **Option A needs nothing more from the link.** Both STROBE outputs (GPIO1
+  for blue, GPIO3 for lime) stay on the head and drive the LED channels
+  directly, as that design's single STROBE drives the IR LEDs. The excitation
+  LEDs' current comes down the coax on top of the head's ~0.5 W, so include
+  it when measuring the tether's voltage drop.
+- **Option B needs two links.** Two coaxes take all four free contacts, and
+  the base needs two deserializers and two ESP32-P4s, unless a dual-input
+  deserializer such as the DS90UB954 can feed one P4 (**VERIFY**).
+- **Fibre-coupled excitation fits the rigs' joint,** which is a fibre-optic
+  and electric rotary joint, if its fibre channel is free (**VERIFY**). Then
+  no excitation LED rides on the head at all.
 
 ### Alternating on the VD55G1
 
@@ -161,7 +181,7 @@ performance against field size.
 | Option | How | Strengths | Costs |
 |---|---|---|---|
 | **Two LEDs on the head** (Zhang et al. 2026) | Blue LXML-PB01 and lime LXML-PX02 (Luxeon Z: LXZ1-PB01, LXZ1-PX01), each with its own half-ball and exciter (ET470/40x, ET560/25x), merged by a T510lpxr dichroic. | Proven; no fibre. | Both beams must be aligned to one angle, or each colour lights a slightly different patch. LED heat on the head. |
-| **One fibre from off the head** (as Doric does) | Thorlabs fibre-coupled LEDs: M470F4 about 20 mW and M565F3 about 13.5 mW into a Ø400 µm fibre, merged on the bench; a small aspheric lens on the head. | Both colours leave the same spot, so they light the same field. The fibre face is evenly lit, so imaging it onto the tissue is fine: lit diameter ≈ core × f(objective) / f(collimator). No LED or driver on the head; switching happens off the head, triggered by the STROBE lines. | An electrical-plus-optical commutator, a stiffer tether, and throughput that changes as the fibre bends. Suits a rat better than a mouse. |
+| **One fibre from off the head** (as Doric does) | Thorlabs fibre-coupled LEDs: M470F4 about 20 mW and M565F3 about 13.5 mW into a Ø400 µm fibre, merged on the bench; a small aspheric lens on the head. | Both colours leave the same spot, so they light the same field. The fibre face is evenly lit, so imaging it onto the tissue is fine: lit diameter ≈ core × f(objective) / f(collimator). No LED or driver on the head; switching happens off the head, triggered by the STROBE lines. | An electrical-plus-optical commutator (the rigs' Doric joint is one), a stiffer tether, and throughput that changes as the fibre bends. Suits a rat better than a mouse. |
 | Ruled out | Multi-die LED packages: the gap between dies becomes an angle (about 27° for 1.5 mm at f = 2.9 mm), so the colours light different fields. Laser diodes: there is no 561 nm diode. | | |
 
 **Lime LEDs are phosphor-converted** and about 100 nm wide, so the lime exciter

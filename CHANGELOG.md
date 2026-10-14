@@ -58,11 +58,12 @@ To release:
   indicator) one-photon miniscope built from the VD55G1 build, as a
   replacement for the Inscopix nVue. It compares one sensor with alternating
   LEDs against two sensors, assigns the VD55G1's GPIOs for alternating
-  excitation, designs the excitation path (LED condensers, filter angles,
-  combining two colours, fibre-coupled light, LED drivers), lists filter sets
-  and indicator crosstalk, and compares candidate sensors (VD55G1, ams
-  Mira050/Mira220, Sony IMX900 and IMX662, PYTHON480) per cell of tissue.
-  Design only; open questions are marked VERIFY.
+  excitation, notes what each option needs from the FPD-Link tether
+  (`docs/vd55g1-fpdlink.md`), designs the excitation path (LED condensers,
+  filter angles, combining two colours, fibre-coupled light, LED drivers),
+  lists filter sets and indicator crosstalk, and compares candidate sensors
+  (VD55G1, ams Mira050/Mira220, Sony IMX900 and IMX662, PYTHON480) per cell
+  of tissue. Design only; open questions are marked VERIFY.
 - `docs/sensor-bench-test.md`: the bench test plan for choosing between the
   VD55G1 and the Mira050. Lensless EMVA 1288-style measurements (photon
   transfer, QE through the real emission filters, dark current, fixed-pattern
