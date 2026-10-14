@@ -64,6 +64,16 @@ To release:
     firmware, fails on any compiler warning, and uploads the binaries as
     artifacts. It skips commits that change only Markdown.
   - `host.yml` runs the host tests on Python 3.9 and 3.14.
+  - `pre-commit.yml` runs the pre-commit hooks on every push and pull request.
+  - `labeler.yml` labels pull requests by the parts they change;
+    `stale.yml` marks and closes inactive issues and pull requests, with
+    exemptions; `welcome.yml` greets first-time contributors.
+- **Contributor tooling:** a pre-commit configuration (whitespace, line
+  endings, actionlint, schema checks for workflows, config and citation
+  files, ruff); issue forms, a Q&A discussion form and a pull request
+  template; CONTRIBUTING, SUPPORT, SECURITY, CODE_OF_CONDUCT, CODEOWNERS,
+  CITATION.cff and .zenodo.json; Dependabot for GitHub Actions; release-note
+  categories.
 - Princeton University license, adapted from Princeton's WordNet license, with
   a limitation-of-liability clause taken from BSD-3-Clause; README status and
   license badges.
