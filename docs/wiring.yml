@@ -33,8 +33,11 @@ builds:
         name: ST STEVAL-CAM-M0I P-Board (order code STEVAL-CAM-M0I1)
         notes: 30-pin promodule input, 22-pin FFC output, its own 12 MHz clock for the sensor.
       - id: cable
-        name: 22-pin → 15-pin MIPI CSI ribbon cable
-        notes: Check the P-Board's pinout and lane polarity first; the ESP32-P4 cannot swap a lane's P and N.
+        name: Raspberry Pi 5 camera cable, 22-pin (0.5 mm) → 15-pin (1.0 mm)
+        notes: >-
+          The P-Board's output uses the Raspberry Pi 5 pinout; the board's connector carries the
+          Raspberry Pi 15-pin signals. Lane polarity is still to check: the ESP32-P4 cannot swap a
+          lane's P and N.
       - id: board
         name: Espressif ESP32-P4X-Function-EV-Board
         notes: Chip revision v3.1+ (what the firmware builds for). Firmware `nir-eye-cam-…-esp32p4.zip`.
@@ -69,6 +72,7 @@ builds:
         to: board
         signals:
           - "15-pin camera connector: MIPI CSI-2, 1 lane"
+          - "pin 5 (Pi pin 11, CAM_IO0) → sensor reset: must be high"
           - "I2C: SDA {PIN_I2C_SDA}, SCL {PIN_I2C_SCL}"
       - from: pboard
         to: shift

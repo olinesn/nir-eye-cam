@@ -76,14 +76,26 @@ before connecting it:
   for some of its VD55G1 boards, and ST warned that one of its adapter boards
   does not match the Raspberry Pi pinout. The ESP32-P4 cannot swap a lane's
   P and N in software, so a swapped board needs a cable that swaps them.
-- **The cable.** The P-Board has a 22-pin FFC output; the ESP32-P4X board
-  has a 15-pin, 1.0 mm Raspberry-Pi-style connector. Check the pinouts
-  before buying a 22-to-15-pin cable.
-- **Power enable.** ST's overlay powers the module's 2.8 V rail from a
-  regulator the host switches through the camera connector's enable pin.
-  Check what the ESP32-P4X board does with that pin.
-- **XSHUTDOWN.** No board GPIO drives it (`PIN_XSHUTDOWN` is -1), so the
-  P-Board must hold it high.
+- **The cable: a Raspberry Pi 5 camera cable (22-pin, 0.5 mm → 15-pin,
+  1.0 mm).** The P-Board's 22-pin output uses the Raspberry Pi 5 pinout (an
+  ST community thread, and ST's driver keeps its files for that connector
+  with the Pi 5's). The ESP32-P4X board's 15-pin connector carries the
+  Raspberry Pi 15-pin camera signals, numbered from the other end:
+  Espressif's pin *n* is the Raspberry Pi's pin 16 − *n* (Espressif's camera
+  adapter schematic). So the cable that connects a 15-pin camera to a Pi 5
+  connects these two. Check that its contacts face the connector's contacts
+  at both ends.
+- **The enable pin: reset and power.** ST says the P-Board's sensor reset
+  "is controlled by the GPIO": the connector's CAM_IO0 (Raspberry Pi pin 11),
+  which a Raspberry Pi drives high to power the camera and release its
+  reset. On the ESP32-P4X board that is connector pin 5, labelled RESET on
+  Espressif's own camera adapter, which pulls it up to 1.8 V itself, so the
+  main board may not drive it at all. One user found a host holding that
+  line low, which kept the P-Board's sensor in reset. With the P-Board
+  connected and powered, measure it at the P-Board: high is right. If it is
+  low or floating, `INFO` reports `cam_ok` 0 and the sensor never answers at
+  0x10. Pull the line up to 3.3 V (what a Raspberry Pi drives), or, if the
+  ESP32-P4X schematic shows a GPIO on it, set `PIN_XSHUTDOWN` to that GPIO.
 - **CLKIN.** `SENSOR_EXT_CLK_HZ` is 12 MHz, as in ST's overlay. The sensor's
   PLL is computed from it.
 - **Sensor GPIOs.** ST's overlay drives the LED strobe from sensor GPIO2;

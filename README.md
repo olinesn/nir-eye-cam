@@ -79,7 +79,7 @@ Global shutter, and exposure-locked sync through EXTSYNC. Nothing here has run o
 flowchart LR
     module["ST CAM-5G1-080NIR promodule"]
     pboard["ST STEVAL-CAM-M0I P-Board (order code STEVAL-CAM-M0I1)"]
-    cable["22-pin → 15-pin MIPI CSI ribbon cable"]
+    cable["Raspberry Pi 5 camera cable, 22-pin (0.5 mm) → 15-pin (1.0 mm)"]
     board["Espressif ESP32-P4X-Function-EV-Board"]
     shift["1.8 V ↔ 3.3 V level shifters (e.g. SN74LVC1T45)"]
     driver["IR LED driver"]
@@ -88,7 +88,7 @@ flowchart LR
     pc["Computer"]
     module -- "30-pin promodule connector" --> pboard
     pboard -- "22-pin FFC" --> cable
-    cable -- "15-pin camera connector: MIPI CSI-2, 1 lane<br/>I2C: SDA GPIO7 (J1-3), SCL GPIO8 (J1-5)" --> board
+    cable -- "15-pin camera connector: MIPI CSI-2, 1 lane<br/>pin 5 (Pi pin 11, CAM_IO0) → sensor reset: must be high<br/>I2C: SDA GPIO7 (J1-3), SCL GPIO8 (J1-5)" --> board
     pboard -- "FSYNC_OUT, sensor GPIO2" --> shift
     shift -- "FSYNC → GPIO20 (J1-13)" --> board
     board -- "GPIO23 (J1-7) → TRIG" --> shift
@@ -105,7 +105,7 @@ flowchart LR
 |---|---|
 | **ST CAM-5G1-080NIR promodule** | VD55G1, 804 × 704 mono global shutter, 80° lens with a 940 nm bandpass filter. For 850 nm light: CAM-5G1-081CLR plus an 830 nm long-pass filter. CAM-5G1-160CLR (160° fisheye) is for bring-up only. |
 | **ST STEVAL-CAM-M0I P-Board (order code STEVAL-CAM-M0I1)** | 30-pin promodule input, 22-pin FFC output, its own 12 MHz clock for the sensor. |
-| **22-pin → 15-pin MIPI CSI ribbon cable** | Check the P-Board's pinout and lane polarity first; the ESP32-P4 cannot swap a lane's P and N. |
+| **Raspberry Pi 5 camera cable, 22-pin (0.5 mm) → 15-pin (1.0 mm)** | The P-Board's output uses the Raspberry Pi 5 pinout; the board's connector carries the Raspberry Pi 15-pin signals. Lane polarity is still to check: the ESP32-P4 cannot swap a lane's P and N. |
 | **Espressif ESP32-P4X-Function-EV-Board** | Chip revision v3.1+ (what the firmware builds for). Firmware `nir-eye-cam-…-esp32p4.zip`. |
 | **1.8 V ↔ 3.3 V level shifters (e.g. SN74LVC1T45)** | The sensor's GPIOs run at 1.8 V. |
 | **IR LED driver** | Lights the LEDs only while the sensor's STROBE and the board's LED enable are both high. Circuit still to be designed; its MOSFET must switch fully at 1.8 V. |

@@ -25,9 +25,15 @@
 #define SENSOR_I2C_ADDR      0x10
 #define SENSOR_I2C_HZ        400000
 
-// Sensor reset (XSHUTDOWN, active low). The board drives no camera reset
-// (ESP-IDF's camera example and Espressif's BSP leave it unconnected), so
-// the P-Board must hold it. VERIFY on the P-Board.
+// Sensor reset (XSHUTDOWN, active low). The P-Board takes it from the camera
+// connector's enable pin: CAM_IO0, Raspberry Pi pin 11, which a Raspberry Pi
+// drives high to power the camera and release its reset (ST: "the reset is
+// controlled by the GPIO"). The ESP32-P4X board's connector carries the
+// Raspberry Pi signals numbered from the other end, so that is its pin 5,
+// which Espressif's own camera adapter pulls up to 1.8 V by itself: the main
+// board may not drive it at all, and no board GPIO is known to. VERIFY that
+// it sits high with the P-Board connected (firmware-p4/README.md); if a board
+// GPIO turns out to drive it, put that GPIO here.
 #define PIN_XSHUTDOWN        -1
 
 // Frequency on the sensor's CLKIN (6-27 MHz), from the camera board's own
