@@ -97,6 +97,9 @@ per camera with:
 cd host && pip install -e '.[test]' && pytest
 ```
 
+GitHub Actions runs these on Python 3.9 and 3.14 whenever `host/` changes
+([.github/workflows/host.yml](.github/workflows/host.yml)).
+
 ## License
 
 MIT; see [LICENSE](LICENSE). Third-party code included here keeps its own

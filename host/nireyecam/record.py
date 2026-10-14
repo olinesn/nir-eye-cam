@@ -86,7 +86,7 @@ class CameraRecorder(threading.Thread):
         self.recent_t: list[int] = []  # device times of the last frames, for live fps
         self.error: BaseException | None = None
         self._writer = None
-        self._stop = threading.Event()
+        self._finishing = threading.Event()  # not _stop: Thread uses that name on Python < 3.13
         folder.mkdir(parents=True, exist_ok=True)
         self._frames_csv = open(folder / "frames.csv", "w", newline="")
         self._sync_csv = open(folder / "sync.csv", "w", newline="")
@@ -97,7 +97,7 @@ class CameraRecorder(threading.Thread):
 
     def run(self) -> None:
         try:
-            while not (self._stop.is_set() and self.cam.data.empty()):
+            while not (self._finishing.is_set() and self.cam.data.empty()):
                 try:
                     p, host_ns = self.cam.data.get(timeout=0.1)
                 except queue.Empty:
@@ -135,7 +135,7 @@ class CameraRecorder(threading.Thread):
         return (len(t) - 1) / ((t[-1] - t[0]) / 1e6) if len(t) > 1 and t[-1] > t[0] else 0.0
 
     def finish(self) -> None:
-        self._stop.set()
+        self._finishing.set()
         self.join(timeout=10)
         if self._writer:
             self._writer.close()

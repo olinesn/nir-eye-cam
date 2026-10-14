@@ -1,0 +1,62 @@
+# Runs the host package's tests (protocol, alignment, and end-to-end
+# recording against the simulated cameras) on the oldest and newest Python
+# the package supports. Separate from firmware.yml so a Python change does
+# not rebuild the firmware, and vice versa.
+
+name: Host tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "host/**"
+      - "common/**"   # host/nireyecam/protocol.py mirrors common/nec_protocol.h
+      - ".github/workflows/host.yml"
+  pull_request:
+    paths:
+      - "host/**"
+      - "common/**"
+      - ".github/workflows/host.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: host-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Python ${{ matrix.python }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.14"]
+    defaults:
+      run:
+        working-directory: host
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: host/pyproject.toml
+
+      # Without ffmpeg the lossless-video (FFV1) test is skipped.
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          ffmpeg -version | head -1
+
+      - name: Install the package
+        run: python -m pip install -e '.[test]'
+
+      - name: Test
+        run: python -m pytest -ra
