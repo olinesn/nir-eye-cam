@@ -98,11 +98,12 @@ Don't describe behavior as tested on hardware unless it was.
 LEDs off and switch them off when the host disconnects. Keep it that way:
 these LEDs shine into an animal's eye.
 
-**Licensing.** The project is MIT. Code adapted from elsewhere keeps its
-notice (see the README's License section). Don't copy GPL code into the
-firmware. In particular, the VD55G1 Linux driver may be consulted for register
-values but not copied. Its firmware patch blob is GPL too, and is deliberately
-not included.
+**Licensing.** The project uses a Princeton University license (see
+[LICENSE](LICENSE)). Code adapted from elsewhere keeps its notice (see the
+README's License section). Don't copy GPL code into the firmware. In
+particular, the VD55G1 Linux driver may be consulted for register values but
+not copied. Its firmware patch blob is GPL too, and is deliberately not
+included.
 
 ## Commits and pull requests
 

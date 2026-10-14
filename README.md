@@ -2,7 +2,7 @@
 
 [![Firmware](https://github.com/olinesn/nir-eye-cam/actions/workflows/firmware.yml/badge.svg?branch=main)](https://github.com/olinesn/nir-eye-cam/actions/workflows/firmware.yml)
 [![Host tests](https://github.com/olinesn/nir-eye-cam/actions/workflows/host.yml/badge.svg?branch=main)](https://github.com/olinesn/nir-eye-cam/actions/workflows/host.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: Princeton](https://img.shields.io/badge/license-Princeton-orange.svg)](LICENSE)
 
 Small near-infrared cameras for mouse pupil and eye imaging. Each camera is a
 Himax HM01B0 monochrome sensor (Arducam's Pico module) on a Seeed XIAO
@@ -173,8 +173,14 @@ See [CHANGELOG.md](CHANGELOG.md) for what has changed, and
 
 ## License
 
-MIT; see [LICENSE](LICENSE). Third-party code included here keeps its own
-license:
+A Princeton University license, adapted from the license of Princeton's
+WordNet (SPDX `WordNet`); see [LICENSE](LICENSE). In short:
+- anyone may use, copy, modify and distribute the software for any purpose,
+  without fee, provided the copyright notice and disclaimer stay on every copy;
+- Princeton's name may not be used in advertising;
+- Princeton University holds the copyright.
+
+Third-party code included here keeps its own license:
 
 - `firmware/src/camera.c` adapts the sensor setup and PIO program from Arm's
   [hm01b0-library-for-pico](https://github.com/ArmDeveloperEcosystem/hm01b0-library-for-pico)
