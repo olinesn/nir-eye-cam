@@ -23,6 +23,14 @@ To release:
 
 ### Added
 
+- `docs/vd55g1-fpdlink.md`: a design sketch for a freely moving build. Only
+  the VD55G1 and a TI DS90UB953 serializer ride on the head; one thin coax
+  through two of the commutator's four free contacts carries power, video,
+  I²C and GPIO to a DS90UB934 deserializer and the ESP32-P4 at the base. The
+  953 runs in its backward-compatible DVP mode, 700 Mbit/s on the coax
+  instead of 4.16 Gbit/s. SYNC is timestamped at the base, so no sync wire
+  crosses the joint. The plan starts with a bench test of the link through
+  the joint on TI evaluation boards. Nothing is built.
 - `docs/hardware.md`: a **Tether and commutator** section for freely moving
   animals. The Neuropixels cable CBL_1000 cannot carry the ESP32-P4 build's
   USB at any speed: it is one twisted pair, and USB 2.0 needs four wires (a
