@@ -29,8 +29,9 @@ To release:
   USB-C-to-USB-C cable, five plus a shield). It compares the cable with the
   USB 2.0 and USB-C limits, estimates the camera's power draw and the voltage
   lost over a thin tether, summarizes Doric's 24-contact commutator, and ranks
-  the options: the camera's own cable at full speed first, then a serializer
-  over one pair, then wireless.
+  the options: the camera's own cable through the joint's 4-pin port at full
+  speed first, with a powered hub at the commutator, then a serializer over
+  one pair, then wireless.
 
 ## [0.2.0] - 2026-10-14
 

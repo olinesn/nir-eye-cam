@@ -148,16 +148,18 @@ support this sensor.
 ## Tether and commutator (freely moving)
 
 On a freely moving animal, the camera's cable has to pass a commutator. The
-Neuropixels 2.0 rigs already use a Doric commutator with the IMEC cable
-**CBL_1000**, so the question was whether that cable could carry the ESP32-P4
+Neuropixels 2.0 rigs already pass a Doric commutator, so the question was
+whether IMEC's Neuropixels cable, **CBL_1000**, could carry the ESP32-P4
 build's USB ([vd55g1-esp32p4.md](vd55g1-esp32p4.md)). In short:
 
 - **It cannot, at high or full speed.** CBL_1000 is one twisted pair: two
   wires. USB 2.0 needs four (VBUS, GND, D+, D−), and a USB-C-to-USB-C cable
   needs five plus a shield. New connectors do not add wires, so do not cut
   one for this.
-- **Give the camera its own cable through the same commutator.** Start at USB
-  full speed, then bench-test high speed through the joint (**VERIFY**).
+- **Give the camera its own cable through the same commutator.** On our rigs'
+  joint (HDMI + 4), Neuropixels takes the HDMI port and the 4-pin Molex port
+  has exactly the four wires USB 2.0 needs. Start at USB full speed, then
+  bench-test high speed through the joint (**VERIFY**).
 
 ### CBL_1000 against USB 2.0
 
@@ -193,7 +195,7 @@ commutator), that leaves the camera ~3.4 V, and ~2.8 V during strobes. USB
 promises a device at least 4.40 V (4.75 V above 100 mA), and a 3.3 V regulator
 needs ~3.5 V. Any light tether has this problem. Send power at a higher
 voltage and step it down on the head (at 12 V the camera draws ~0.12 A and
-loses ~0.8 V), or double the power wires across commutator contacts.
+loses ~0.8 V), or double the power wires on a joint with contacts to spare.
 
 ### The commutator
 
@@ -212,20 +214,45 @@ tested, through its own adapter cables.
   "USB2 camera signal" port (Rotary Bundle-imaging Fluorescence Mini Cube) and
   a USB-C joint for its 2-color microscope only, and does not say whether that
   USB crosses the slip ring. Ask Doric.
-- **Spare contacts:** Neuropixels uses one pair, so the camera may fit on
-  contacts it leaves free (e.g. the second PZN-12 port, or the 4-pin Molex).
-  Which are free depends on the joint's connector option and on the pinout of
-  Doric's Neuropixels adapter.
+- **Our rigs use the HDMI + 4 version.** Neuropixels goes through the HDMI
+  port on Doric's two-part Neuropixels adapter: 1 m from the headstage to the
+  rotor, 4 m from the stator to the PXIe card. The other port, a 4-pin Molex
+  Micro-Fit 3.0 on both the rotor and the stator, is for "custom use" in
+  Doric's manual: four contacts, the same as USB 2.0's VBUS, GND, D+ and D−.
+  **VERIFY** that nothing else on the rig uses it, and ask Doric for the
+  current rating per contact.
 
 ### Options, in order
 
-1. **The camera's own cable through spare commutator contacts, full speed
-   first.** At least four wires: a twisted pair for D+/D−, and VBUS and GND
-   doubled across contacts. Full speed carries ~1 MB/s of frames (USB budget,
-   above): 320 × 320 at ~10 fps, 160 × 160 at ~40 fps, 100 × 100 at ~100 fps.
-   The ESP32-P4's 32 MB of PSRAM can hold a burst: up to ~3.5 s of 320 × 320 at
-   100 fps, then ~30 s to send it. Then test high speed through the joint; if
-   it holds, ~10 MB/s.
+1. **The camera's own cable through the 4-pin Molex port, full speed first.**
+   Two cables, each with a Molex plug: one from the rotor to the camera
+   (VBUS, GND and a twisted D+/D− pair), one from the stator to a powered USB
+   hub next to the commutator.
+   - **Put the hub at the commutator.** USB allows ~5 m of cable (26 ns one
+     way, at full and high speed alike), and the Neuropixels layout, 1 m
+     below the joint plus 4 m above it, already uses all of it before the
+     joint's own wiring. A hub starts a new 5 m segment to the PC, and gives
+     a firm 5 V right at the joint.
+   - **Power at 5 V works with a reasonable tether** (estimates): at 250 mA
+     the joint loses up to ~0.25 V, 1 m of 28 AWG ~0.12 V, and a short cable
+     to the hub ~0.05 V. The camera sees ~4.5 V from a 5.0 V port (~4.4 V
+     during strobes): outside USB's 125 + 125 mV budget, but enough for a
+     3.3 V regulator. With a longer or thinner tether, put a small board at the
+     stator that sends ~12 V on the VBUS contact, switched on only while the
+     hub's VBUS is present, and step it down on the head. The camera is then
+     self-powered as far as USB is concerned, so it must sense that line
+     before connecting to the bus (USB 2.0 §7.1.5.1; esp_tinyusb's
+     `self_powered` and `vbus_monitor_io`).
+   - **USB-C at the hub** needs a fifth wire (CC) that the joint does not
+     have. End the stator cable in USB-A, or in a USB-C plug with Rd (5.1 kΩ)
+     from CC to GND inside it, as in a USB-C-to-USB-B cable (USB-C
+     specification Table 3-15).
+   - **Frame rates.** Full speed carries ~1 MB/s of frames (USB budget,
+     above): 320 × 320 at ~10 fps, 160 × 160 at ~40 fps, 100 × 100 at
+     ~100 fps. The ESP32-P4's 32 MB of PSRAM can hold a burst: up to ~3.5 s of
+     320 × 320 at 100 fps, then ~30 s to send it. Then test high speed through
+     the joint: the Micro-Fit is a power connector, not built for 480 Mbit/s.
+     If it holds, ~10 MB/s.
 2. **A serializer over one pair or a thin coax,** as Neuropixels and Open Ephys
    ONIX headstages do. Only the sensor, a TI DS90UB953 serializer (CSI-2 input,
    power over the same cable, 0.28 W, 5 × 5 mm), regulators and LEDs go on the
@@ -247,10 +274,10 @@ tested, through its own adapter cables.
   [Neuropixels cable repair](https://dx.doi.org/10.17504/protocols.io.q26g7q358lwz/v1),
   protocols.io.
 - [USB 2.0 specification](https://www.usb.org/document-library/usb-20-specification):
-  §7.1.1.1 (90 Ω ±15%), §7.1.16 (cable delay), Table 7-6 (cable loss), §7.2.2
-  (voltage drop). [USB Type-C specification](https://www.usb.org/document-library/usb-type-cr-cable-and-connector-specification-release-25)
-  R2.5: Table 3-1 (cable lengths), Table 3-11 (USB 2.0 cable wiring), §4.4.1
-  (IR drop).
+  §7.1.1.1 (90 Ω ±15%), §7.1.5.1 (pull-up only with VBUS), §7.1.16 (cable
+  delay), Table 7-6 (cable loss), §7.2.2 (voltage drop). [USB Type-C specification](https://www.usb.org/document-library/usb-type-cr-cable-and-connector-specification-release-25)
+  R2.5: Table 3-1 (cable lengths), Table 3-11 (USB 2.0 cable wiring), Table
+  3-15 (USB-C to USB 2.0 Standard-B), §4.4.1 (IR drop).
 - Doric Lenses [Assisted Electrical Rotary Joints, 24 contacts](https://neuro.doriclenses.com/collections/electrical-rotary-joints/products/assisted-electrical-rotary-joints-24-contacts)
   product page and [user manual](https://www.doriclenses.com/downloads/UserManual/UserManual_ARJ_24_V1.0.0.pdf)
   v1.0.0; [Neuropixels Adapter](https://neuro.doriclenses.com/products/adapter-hdmi-Neuropixels).
