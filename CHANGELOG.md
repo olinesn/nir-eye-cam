@@ -23,6 +23,17 @@ To release:
 
 ### Changed
 
+- ESP32-P4 build docs: the P-Board cable and reset are resolved as far as
+  the documents allow. The cable is a Raspberry Pi 5 camera cable (22-pin →
+  15-pin): the P-Board's output uses the Pi 5 pinout, and the ESP32-P4X
+  board's 15-pin connector carries the Raspberry Pi signals numbered from the
+  other end (Espressif's camera adapter schematic). The P-Board's sensor reset
+  comes from that connector's CAM_IO0 (Espressif's pin 5, labelled RESET),
+  which must be high; `firmware-p4/README.md` says how to check it and what
+  to do if it is low. The wiring diagram shows both.
+
+### Changed
+
 - README: leads with the ESP32-P4 build, which is the one being built. The
   opening paragraph, the folder overview, the status list, and the Build and
   Flash sections now put it first; the HM01B0 + RP2040 build follows as the
