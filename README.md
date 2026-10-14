@@ -26,8 +26,9 @@ instead.
 - **Host software:** tested against the simulator (`pytest` in `host/`):
   protocol, command replies, recording, and alignment against ground truth
   with clock drift and a missed sync pulse.
-- **Firmware:** written but **not yet compiled or run on hardware**. Expect
-  first-bring-up fixes. Points to check on the bench:
+- **RP2040 firmware:** compiles with no warnings (`-Wall -Wextra`, Pico SDK
+  2.3.1, Arm GNU Toolchain 14.3.rel1) for both boards, but has **not yet run
+  on hardware**. Expect first-bring-up fixes. Points to check on the bench:
   - the measured frame rate (it depends on the module's oscillator);
   - USB throughput at 160×120;
   - the analog-gain register bits (`0x0205[6:4]`, from the Himax register
@@ -36,18 +37,34 @@ instead.
 
 ## Build the firmware
 
+One-time setup (what this repo was built with): CMake and Ninja from
+Homebrew, Arm's GNU toolchain for macOS (the full one with newlib, unpacked
+to `~/pico/toolchain`), and the Pico SDK.
+
 ```bash
-brew install cmake
-brew install --cask gcc-arm-embedded
-git clone --recurse-submodules https://github.com/raspberrypi/pico-sdk ~/pico-sdk
-export PICO_SDK_PATH=~/pico-sdk
-cd firmware
-cmake -B build -DNEC_BOARD=xiao      # or -DNEC_BOARD=pico
-cmake --build build -j
+brew install cmake ninja
+mkdir -p ~/pico/toolchain && cd ~/pico
+curl -LO https://developer.arm.com/-/media/Files/downloads/gnu/14.3.rel1/binrel/arm-gnu-toolchain-14.3.rel1-darwin-arm64-arm-none-eabi.tar.xz
+tar -xJf arm-gnu-toolchain-14.3.rel1-darwin-arm64-arm-none-eabi.tar.xz -C toolchain
+git clone --depth 1 --branch 2.3.1 --recurse-submodules --shallow-submodules https://github.com/raspberrypi/pico-sdk
 ```
 
+Build (one folder per board):
+
+```bash
+export PICO_SDK_PATH=~/pico/pico-sdk
+export PICO_TOOLCHAIN_PATH=~/pico/toolchain/arm-gnu-toolchain-14.3.rel1-darwin-arm64-arm-none-eabi
+cd firmware
+cmake -B build-xiao -G Ninja -DNEC_BOARD=xiao -DPICOTOOL_FETCH_FROM_GIT_PATH=$HOME/pico/picotool
+cmake --build build-xiao        # -> build-xiao/nir_eye_cam_xiao.uf2
+```
+
+Use `-DNEC_BOARD=pico` (and `build-pico`) for a Raspberry Pi Pico. The SDK
+downloads and builds `picotool` (its UF2 tool) on first use;
+`PICOTOOL_FETCH_FROM_GIT_PATH` keeps one shared copy.
+
 Flash: hold BOOT (the "B" button on the XIAO) while plugging in USB, then copy
-`build/nir_eye_cam_xiao.uf2` onto the `RPI-RP2` drive that appears.
+the `.uf2` onto the `RPI-RP2` drive that appears.
 
 ## Record
 
