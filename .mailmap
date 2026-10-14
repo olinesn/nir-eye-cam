@@ -1,0 +1,7 @@
+# Canonical names for git log, shortlog and blame
+# (https://git-scm.com/docs/gitmailmap). Format:
+#   Proper Name <proper@email> Commit Name <commit@email>
+# A line with just "Proper Name <commit@email>" renames every commit from that
+# email. Add a line when someone commits under a new name or address.
+
+Stefan N. Oline <olinesn@gmail.com>
