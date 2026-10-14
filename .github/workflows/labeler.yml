@@ -1,0 +1,33 @@
+# Labels each pull request from the files it changes (.github/labeler.yml).
+#
+# pull_request_target runs this workflow, and reads the labeler config, as
+# they are on main rather than as the pull request has them, and nothing here
+# checks out or runs the pull request's code: the action only compares file
+# names. That is what makes a write token safe here; it is GitHub's
+# recommended setup for this action. Run it by hand with a number to label a
+# pull request opened before this workflow existed.
+
+name: Labeler
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: Pull request number to label
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    name: Label pull request
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0
+        with:
+          # Empty on pull_request_target: the action then uses that event's PR.
+          pr-number: ${{ inputs.pr-number }}

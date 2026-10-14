@@ -30,6 +30,11 @@ To release:
   sensor to free-running, and `INFO`'s `extsync` now follows the sensor. Not
   yet run on hardware: which edge starts a frame, the delay to exposure, and
   `START`/`STOP` with no pulses arriving are marked VERIFY.
+- `docs/hardware.md`: a **Depth sensing** section for the pupil-dilation and
+  facial-expression projects. It compares small depth sensors (direct and
+  indirect ToF, structured light, RealSense D405, stereo), estimates stereo
+  depth precision for the VD55G1 build, and recommends an approach for each
+  project.
 
 ### Fixed
 
@@ -83,6 +88,16 @@ To release:
     firmware, fails on any compiler warning, and uploads the binaries as
     artifacts. It skips commits that change only Markdown.
   - `host.yml` runs the host tests on Python 3.9 and 3.14.
+  - `pre-commit.yml` runs the pre-commit hooks on every push and pull request.
+  - `labeler.yml` labels pull requests by the parts they change;
+    `stale.yml` marks and closes inactive issues and pull requests, with
+    exemptions; `welcome.yml` greets first-time contributors.
+- **Contributor tooling:** a pre-commit configuration (whitespace, line
+  endings, actionlint, schema checks for workflows, config and citation
+  files, ruff); issue forms, a Q&A discussion form and a pull request
+  template; CONTRIBUTING, SUPPORT, SECURITY, CODE_OF_CONDUCT, CODEOWNERS,
+  CITATION.cff and .zenodo.json; Dependabot for GitHub Actions; release-note
+  categories.
 - Princeton University license, adapted from Princeton's WordNet license, with
   a limitation-of-liability clause taken from BSD-3-Clause; README status and
   license badges.

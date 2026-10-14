@@ -144,3 +144,130 @@ Arducam does not specify. `nireyecam-record` prints the measured frame rate,
 and `--fll` lowers it. Dropped frames appear as gaps in `seq`. A camera that
 needs more needs high-speed USB: a Teensy 4.x, whose camera libraries
 support this sensor.
+
+## Depth sensing
+
+Two projects built on these cameras could use depth: **pupil dilation** and
+**facial expression detection**. In short:
+
+- **Pupil dilation:** no depth sensor. A fixed magnification cancels out of
+  relative dilation, and no depth sensor works on an eye at this distance
+  (below). If you need the eye's 3D position, use a stereo pair of VD55G1
+  cameras.
+- **Facial expression:** start in 2D. For 3D, use a stereo pair of triggered
+  VD55G1 cameras, plus a 940 nm dot projector if the coat has little texture.
+
+### Depth sensors at 1–10 cm
+
+| Type | Small parts | Fit here |
+|---|---|---|
+| Multi-zone direct ToF | ST VL53L8CX: 8×8 zones, 65° diagonal, 2–400 cm, 6.4 × 3.0 × 1.75 mm. ams TMF8829: up to 48×32 zones, 80° diagonal, 5.7 × 2.9 × 1.5 mm, pre-production. ST VL53L9CA: 54×42 zones, from below 5 cm. | I²C/SPI, so a XIAO RP2040 could drive one. But at 3 cm one VL53L8CX zone is ~3.4 mm wide, the whole eye, and a TMF8829 zone is ~1.4 mm at 5 cm. A distance reading, not a shape. Check the datasheets for accuracy at close range. |
+| Indirect ToF imager | ST VD55H1: 672 × 804, 4.6 µm, sold only as a die on reconstructed wafers. Infineon IRS2976C: 640 × 480, 23 mm². | Needs a VCSEL, a driver and a MIPI host. Built for tens of centimetres to 5–10 m, with millimetre-level noise or worse. |
+| Structured light (Face ID) | Not sold as a part. | Works at 25–50 cm. |
+| Packaged stereo | Intel RealSense D405: minimum depth ~7 cm at 480p, 42 × 42 × 23 mm, USB. | No projector, and an IR-cut filter: it needs visible light, which the animal sees and which drives the pupil. Useful only as a bench test for facial expression. |
+| Stereo from two of these cameras | Two VD55G1 units on the shared trigger, optionally with an ams OSRAM Belago dot projector. Belago 1.1: 4.2 × 3.6 × 3.3 mm, ~5,000 dots. Belago 1.2: 940 nm, ~15,000 dots. | Recommended. Precision below. |
+
+Two things defeat every active sensor on an **eye**. The cornea is clear and
+mirror-like, so ToF light and projected dots pass through it or glint off it
+instead of returning from its surface. And the pupil is a hole that returns
+almost nothing. On a **face**, fur scatters light inside the coat, which adds
+error to ToF depth.
+
+### Stereo depth precision
+
+For two parallel cameras:
+
+    depth step ≈ (working distance ÷ baseline)
+                 × (pixel size on the subject) × (matching precision, px)
+
+The pixel size on the subject is 1 / (px per mm), from the optics table in
+[vd55g1-esp32p4.md](vd55g1-esp32p4.md). With ¼-pixel matching:
+
+| Subject | Close-up lens F (≈ working distance) | px / mm | Baseline | Depth step |
+|---|---|---|---|---|
+| Mouse eye | 15 mm | 41 | 8 mm | ~0.01 mm |
+| Mouse face | 30 mm | 20 | 12 mm | ~0.03 mm |
+| Rat face | 50 mm | 12 | 20 mm | ~0.05 mm |
+
+- **¼-pixel matching needs texture:** the pupil edge, whiskers, or patterned
+  fur. A uniform coat under flood light matches worse, and the depth step
+  grows in proportion (½ px doubles it). A dot projector adds texture.
+- **The exposures must be simultaneous.** The HM01B0 cameras free-run, 0–33 ms
+  apart at 30 fps (see Synchronization). That is fine for pupil diameter, but
+  not for a moving eye or a whisking face. Stereo needs the VD55G1 build with
+  external sync (`EXTSYNC`), which is not implemented yet.
+- **Calibrate** with a millimetre-scale ChArUco board at the working distance.
+  Label keypoints in SLEAP and triangulate them in LUCID or anipose. For a
+  dense depth map, rectify the pair and run a stereo matcher (e.g. OpenCV's
+  `StereoSGBM`).
+
+### Project 1: pupil dilation
+
+- **Relative dilation needs no depth.** With the head fixed, or the camera
+  mounted on the head, the eye-to-camera distance is constant. So is the
+  magnification, which then cancels out of dilation relative to baseline.
+- **Use the pupil ellipse's major axis,** not its area or minor axis. When the
+  eye rotates, the pupil foreshortens along one axis only, so the major axis
+  stays close to the true diameter.
+- **For millimetres,** image a scale at the pupil's position once. Movement
+  along the camera axis changes the magnification by about (movement ÷ working
+  distance): at 15–30 mm, 0.15–0.3 mm of movement is a 1% size error. You
+  measure the *apparent* pupil, magnified by the cornea. That factor is
+  constant, so it does not affect relative dilation.
+- **If the eye moves along the axis enough to matter, or you need its 3D
+  position,** use a stereo pair (above).
+- **For gaze without a second camera,** fit a 3D eye model to the pupil
+  ellipse over time (Świrski & Dodgson 2013), or track the pupil against the
+  corneal reflections of two LEDs.
+
+### Project 2: facial expression detection
+
+- **What is scored.** The Mouse Grimace Scale scores orbital tightening, nose
+  bulge, cheek bulge, ear position and whisker change (Langford et al. 2010).
+  The Rat Grimace Scale scores orbital tightening, nose/cheek flattening, ear
+  changes and whisker change (Sotocinal et al. 2011). The eyes, ears and
+  whiskers show in 2D. The nose and cheek changes are changes of 3D shape,
+  which is where depth adds the most.
+- **Start in 2D.** Published work classifies mouse expressions from one
+  side-view camera (Dolensek et al. 2020) and tracks face keypoints in 2D
+  (Facemap, Syeda et al. 2024). One VD55G1 camera with a close-up lens of
+  F ≈ 30 mm (mouse) or 50 mm (rat) frames the face. The module's own focus
+  runs from 13.4 cm to infinity, so it needs the close-up lens here too.
+- **For 3D, add a second triggered camera.** The pair gives both 3D keypoints
+  and a dense depth map from the same hardware (precision above).
+- **Add a projector if the coat is uniform.** Under flood light, a light coat
+  has little texture to match. The Belago 1.2 emits at 940 nm, the band the
+  CAM-5G1-080NIR's filter passes. **VERIFY** its pattern before buying: it is
+  designed for robots at room scale, so check the dot spacing and focus at
+  3–5 cm. Its eye-safety design assumes normal viewing distances, but here it
+  would sit centimetres from the animal's eye, so measure the irradiance there.
+- **To run both projects on one animal,** keep the projector out of the pupil
+  video: the eye camera's filter (780–830 nm long-pass, or the
+  CAM-5G1-080NIR's 940 nm bandpass) passes 940 nm. Drive the projector from
+  the face cameras' STROBE and trigger the eye camera between face exposures,
+  or use the face pair without the projector.
+- **Not suitable:** ToF, because fur adds error and the noise is
+  millimetre-level, and the RealSense D405 in a dark rig, because it sees
+  visible light only. On the bench in room light, though, a D405 can show
+  whether depth separates the expressions you care about before you build
+  anything.
+
+### Sources
+
+- ST [VL53L8CX](https://www.st.com/en/imaging-and-photonics-solutions/vl53l8cx.html),
+  [VL53L9CA](https://www.st.com/en/imaging-and-photonics-solutions/vl53l9ca.html)
+  and [VD55H1](https://www.st.com/en/imaging-and-photonics-solutions/vd55h1.html)
+  product pages.
+- ams OSRAM [TMF8829](https://ams-osram.com/products/sensor-solutions/direct-time-of-flight-sensors-dtof/ams-tmf8829-48x32-multi-zone-time-of-flight-sensor)
+  product page; [Belago 1.1](https://ams-osram.com/news/press-releases/luxonis-belago1.1)
+  press release.
+- Infineon [IRS2976C](https://www.infineon.com/cms/en/about-infineon/press/market-news/2023/INFPSS202302-067.html)
+  press release.
+- Intel [RealSense D405](https://www.intelrealsense.com/depth-camera-d405/)
+  product page. RealSense support forum: the D405 has no projector, and an
+  IR-cut filter on its sensors.
+- Langford et al. 2010, *Nature Methods* (Mouse Grimace Scale).
+  Sotocinal et al. 2011, *Molecular Pain* (Rat Grimace Scale).
+  Dolensek et al. 2020, *Science* (facial expressions of emotion in mice).
+  Syeda et al. 2024, *Nature Neuroscience* (Facemap).
+  Świrski & Dodgson 2013, PETMEI (single-camera 3D eye model fitting).

@@ -1,0 +1,37 @@
+# Labels the labeler action (actions/labeler) puts on a pull request from the
+# files it changes. A pull request can get several "area" labels.
+# `documentation` is only for pull requests that change nothing but docs, so
+# a code change that also edits a README is not filed under Documentation in
+# the generated release notes (.github/release.yml).
+
+"area: rp2040 firmware":
+  - changed-files:
+      - any-glob-to-any-file: ["firmware/**"]
+
+"area: esp32-p4 firmware":
+  - changed-files:
+      - any-glob-to-any-file: ["firmware-p4/**"]
+
+# The packet format lives in four places (see CONTRIBUTING.md).
+"area: protocol":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "common/**"
+          - "host/nireyecam/protocol.py"
+          - "host/nireyecam/simulator.py"
+          - "docs/protocol.md"
+
+"area: host":
+  - changed-files:
+      - any-glob-to-any-file: ["host/**"]
+
+"area: ci":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/**"
+          - ".github/dependabot.yml"
+          - ".pre-commit-config.yaml"
+
+documentation:
+  - changed-files:
+      - any-glob-to-all-files: ["**/*.md"]
