@@ -1,12 +1,18 @@
-# Marks issues stale after 90 days without activity and closes them 14 days
-# later unless someone comments or removes the label. Deliberately gentle:
-# - issues only; pull requests (Dependabot's included) are never touched;
-# - never touches bench-test results (records, not open problems), feature
-#   requests (`enhancement`), or issues someone is assigned to.
+# Marks issues and pull requests stale after 90 days without activity and
+# closes them 14 days later unless someone comments, pushes, or removes the
+# label. Deliberately gentle, it never touches:
+# - bench-test results (records, not open problems), feature requests
+#   (`enhancement`), or issues someone is assigned to;
+# - draft pull requests, Dependabot's (`dependencies`; it replaces its own
+#   each month), or pull requests someone is assigned to. Branches are never
+#   deleted.
+# Issues and pull requests share this one workflow on purpose: actions/stale
+# keeps its progress under a fixed cache key, so a second stale workflow
+# would read this one's progress and skip items.
 # Run it by hand from the Actions tab: by default a manual run is a dry run
 # that only logs what it would do.
 
-name: Stale issues
+name: Stale issues and pull requests
 
 on:
   schedule:
@@ -21,7 +27,7 @@ on:
 permissions:
   actions: write       # the action keeps its state in the Actions cache
   issues: write
-  pull-requests: read
+  pull-requests: write
 
 concurrency:
   group: stale
@@ -29,18 +35,23 @@ concurrency:
 
 jobs:
   stale:
-    name: Mark and close stale issues
+    name: Mark and close stale issues and pull requests
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93 # v11.0.0
         with:
           days-before-issue-stale: 90
           days-before-issue-close: 14
-          days-before-pr-stale: -1
-          days-before-pr-close: -1
+          days-before-pr-stale: 90
+          days-before-pr-close: 14
           stale-issue-label: stale
+          stale-pr-label: stale
           exempt-issue-labels: bench-test,enhancement
           exempt-all-issue-assignees: true
+          exempt-draft-pr: true
+          exempt-pr-labels: dependencies
+          exempt-all-pr-assignees: true
+          delete-branch: false
           # Scheduled runs act; a manual run only logs unless dry-run is off.
           debug-only: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run }}
           stale-issue-message: >
@@ -51,3 +62,10 @@ jobs:
           close-issue-message: >
             Closed after 104 days without activity. If this still matters,
             reopen it or open a new issue that links here.
+          stale-pr-message: >
+            This pull request has had no activity for 90 days, so it has been
+            marked stale. It will be closed in 14 days unless someone comments,
+            pushes a commit, or removes the `stale` label. Its branch is kept.
+          close-pr-message: >
+            Closed after 104 days without activity. The branch is kept, so the
+            pull request can be reopened at any time.
