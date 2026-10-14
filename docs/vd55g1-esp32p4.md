@@ -111,9 +111,60 @@ Plan:
 Fallback if external sync does not work: free-run with FSYNC_OUT timestamps,
 which is the current time-aligned scheme with a better sensor.
 
-Sensor GPIOs run at 1.8 V. Put a level shifter (e.g. SN74LVC1T45) between
-them and the ESP32-P4, and make the LED MOSFET's gate threshold safe at 1.8 V
-(or buffer it).
+Sensor GPIOs run at 1.8 V and the ESP32-P4's at 3.3 V: the next section
+gives the level shifting and the LED driver.
+
+## IR LED driver and level shifting (bench prototype)
+
+Breadboard parts for the ESP32-P4X-Function-EV-Board. Two jobs: shift the
+sensor's 1.8 V GPIOs to and from the ESP32-P4's 3.3 V, and light the IR LEDs
+only while the sensor's STROBE (on during exposure) **and** the firmware's
+LED enable are both high, so the IR is off unless the host asked for it.
+
+```
+ P-Board (1.8 V)                 TXB0104 breakout          ESP32-P4X (header J1)
+ sensor GPIO2  FSYNC_OUT ─────── A1      B1 ────────────── GPIO20 (J1-13)  FSYNC in
+ sensor GPIO0  EXTSYNC   ─────── A2      B2 ────────────── GPIO23 (J1-7)   TRIG out
+ sensor GPIO1  STROBE    ─────── A3      B3 ────────────── 74HCT08 pin 1A  (STROBE, 3.3 V)
+ 1.8 V I/O rail          ─────── VA      VB ────────────── 3V3   (J1-1)
+ GND                     ─────── GND    GND ────────────── GND   (J1-6)
+
+ 74HCT08 (VCC from 5V, J1-2; GND; 0.1 µF across them)
+   1A  ── B3 of the TXB0104 (STROBE)
+   1B  ──┬── GPIO32 (J1-26), LED enable
+         └── 100 kΩ ── GND
+   1Y  ── 100 Ω ──┬── IRLB8721 gate
+                  └── 100 kΩ ── GND
+   unused inputs (2A 2B 3A 3B 4A 4B) ── GND
+
+ IRLB8721:  source ── GND,  drain ── LED cathode end
+ 5V (J1-2) ── R ── LED ── LED ── IRLB8721 drain
+```
+
+| Part | Qty | Notes |
+|---|---|---|
+| TXB0104 level-shifter breakout (Adafruit 1875, or SparkFun BOB-11771) | 1 | A side 1.2–3.6 V, B side 1.65–5.5 V: 1.8 V on A, 3.3 V on B. Three of its four channels (FSYNC, TRIG, STROBE). Direction is automatic. |
+| 74HCT08 quad 2-input AND gate, DIP-14 | 1 | On 5 V, so its output turns the MOSFET fully on; its TTL-level inputs (high above 2.0 V) read the 3.3 V signals. Tie the unused inputs to GND; 0.1 µF across its supply. |
+| IRLB8721 N-channel MOSFET, TO-220 | 1 | Gate threshold 1.35–2.35 V; on-resistance at most 16 mΩ at a 4.5 V gate. Far more than two LEDs need. |
+| 100 Ω, and two 100 kΩ resistors | 1 + 2 | Gate resistor; pull-downs on the gate and on LED enable, which keep the IR off while anything is unpowered or booting (GPIO32 floats until the firmware drives it). |
+| Vishay TSAL6400, 940 nm IR LED (±25°, ~1.35 V) | 2, plus spares | For the CAM-5G1-080NIR (940 nm bandpass). With the clear module, an 850 nm LED and an 830 nm long-pass filter instead. |
+| LED series resistor | 1 | R = (5 V − LEDs × 1.35 V) / current. Two LEDs: 120 Ω for 20 mA, 47 Ω for 50 mA. |
+| 1.8 V for the shifter's A side | | From the P-Board's 1.8 V I/O rail, so the levels match the sensor's. **VERIFY** the P-Board brings it out; if not, a small 3.3 V → 1.8 V regulator. |
+
+Rules:
+- **Start at 20 mA, and measure before raising it.** Aim for well under
+  1 mW/cm² at the eye ([hardware.md](hardware.md), Illumination and safety).
+  STROBE lights the LEDs only during exposure, so the average irradiance is
+  the exposure's share of the frame period.
+- **The two pull-downs stay.** They are what keeps the IR off at power-up,
+  before the firmware runs.
+- **No resistors on the TXB0104's channels.** The TXB family is made for
+  push-pull signals; strong pull-ups or pull-downs on its lines upset its
+  automatic direction sensing.
+- **VERIFY when the P-Board arrives:** which sensor GPIOs and which 1.8 V
+  point it brings out. ST's Raspberry Pi overlay drives the strobe from
+  sensor GPIO2; if only GPIO2 is available, swap the STROBE and FSYNC_OUT
+  roles in `firmware-p4/main/board.h`.
 
 ## Firmware (ESP-IDF)
 

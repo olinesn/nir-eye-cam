@@ -81,21 +81,21 @@ flowchart LR
     pboard["ST STEVAL-CAM-M0I P-Board (order code STEVAL-CAM-M0I1)"]
     cable["Raspberry Pi 5 camera cable, 22-pin (0.5 mm) → 15-pin (1.0 mm)"]
     board["Espressif ESP32-P4X-Function-EV-Board"]
-    shift["1.8 V ↔ 3.3 V level shifters (e.g. SN74LVC1T45)"]
-    driver["IR LED driver"]
-    leds["940 nm IR LEDs (850 nm with the clear module)"]
+    shift["TXB0104 level-shifter breakout (Adafruit 1875 or SparkFun BOB-11771)"]
+    driver["IR LED driver: 74HCT08 AND gate + IRLB8721 MOSFET"]
+    leds["2 × Vishay TSAL6400 940 nm IR LEDs + series resistor"]
     sync["Sync line"]
     pc["Computer"]
     module -- "30-pin promodule connector" --> pboard
     pboard -- "22-pin FFC" --> cable
     cable -- "15-pin camera connector: MIPI CSI-2, 1 lane<br/>pin 5 (Pi pin 11, CAM_IO0) → sensor reset: must be high<br/>I2C: SDA GPIO7 (J1-3), SCL GPIO8 (J1-5)" --> board
-    pboard -- "FSYNC_OUT, sensor GPIO2" --> shift
+    pboard -- "FSYNC_OUT, sensor GPIO2<br/>STROBE, sensor GPIO1<br/>1.8 V I/O rail → VA" --> shift
     shift -- "FSYNC → GPIO20 (J1-13)" --> board
-    board -- "GPIO23 (J1-7) → TRIG" --> shift
+    board -- "GPIO23 (J1-7) → TRIG<br/>3V3 → VB, GND" --> shift
     shift -- "EXTSYNC, sensor GPIO0" --> pboard
-    pboard -- "STROBE, sensor GPIO1" --> driver
-    board -- "GPIO32 (J1-26) → LED enable" --> driver
-    driver -- "LED current" --> leds
+    shift -- "STROBE (3.3 V) → 74HCT08" --> driver
+    board -- "GPIO32 (J1-26) → LED enable (74HCT08)<br/>5 V, GND" --> driver
+    driver -- "MOSFET drain ← LED cathodes; LEDs from 5 V" --> leds
     sync -- "SYNC_IN → GPIO21 (J1-11)" --> board
     board -- "GPIO22 (J1-12) → SYNC_OUT (sync master only)" --> sync
     board -- "USB 2.0 high speed" --> pc
@@ -107,9 +107,9 @@ flowchart LR
 | **ST STEVAL-CAM-M0I P-Board (order code STEVAL-CAM-M0I1)** | 30-pin promodule input, 22-pin FFC output, its own 12 MHz clock for the sensor. |
 | **Raspberry Pi 5 camera cable, 22-pin (0.5 mm) → 15-pin (1.0 mm)** | The P-Board's output uses the Raspberry Pi 5 pinout; the board's connector carries the Raspberry Pi 15-pin signals. Lane polarity is still to check: the ESP32-P4 cannot swap a lane's P and N. |
 | **Espressif ESP32-P4X-Function-EV-Board** | Chip revision v3.1+ (what the firmware builds for). Firmware `nir-eye-cam-…-esp32p4.zip`. |
-| **1.8 V ↔ 3.3 V level shifters (e.g. SN74LVC1T45)** | The sensor's GPIOs run at 1.8 V. |
-| **IR LED driver** | Lights the LEDs only while the sensor's STROBE and the board's LED enable are both high. Circuit still to be designed; its MOSFET must switch fully at 1.8 V. |
-| **940 nm IR LEDs (850 nm with the clear module)** | Current set by a resistor. |
+| **TXB0104 level-shifter breakout (Adafruit 1875 or SparkFun BOB-11771)** | 1.8 V side from the P-Board's I/O rail, 3.3 V side from the board. Three of its four channels: FSYNC, TRIG and STROBE. |
+| **IR LED driver: 74HCT08 AND gate + IRLB8721 MOSFET** | Lights the LEDs only while the sensor's STROBE and the board's LED enable are both high. 74HCT08 on 5 V; 100 Ω gate resistor; 100 kΩ pull-downs on the gate and on LED enable keep the IR off at power-up. Schematic in docs/vd55g1-esp32p4.md. |
+| **2 × Vishay TSAL6400 940 nm IR LEDs + series resistor** | From 5 V: 120 Ω for 20 mA, 47 Ω for 50 mA. Start at 20 mA and measure at the eye. With the clear module: 850 nm LEDs and an 830 nm long-pass filter. |
 | **Sync line** | The rig's TTL, or the master's SYNC_OUT; also every camera's trigger in exposure-locked mode. |
 | **Computer** | On the Type-C port labelled USB 2.0. Flash through the one labelled USB Serial/JTAG. |
 | **Close-up lens f ≈ 15 mm in a 3D-printed cap** | Frames the eye; see docs/vd55g1-esp32p4.md (Optics). |

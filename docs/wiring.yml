@@ -42,16 +42,21 @@ builds:
         name: Espressif ESP32-P4X-Function-EV-Board
         notes: Chip revision v3.1+ (what the firmware builds for). Firmware `nir-eye-cam-…-esp32p4.zip`.
       - id: shift
-        name: 1.8 V ↔ 3.3 V level shifters (e.g. SN74LVC1T45)
-        notes: The sensor's GPIOs run at 1.8 V.
-      - id: driver
-        name: IR LED driver
+        name: TXB0104 level-shifter breakout (Adafruit 1875 or SparkFun BOB-11771)
         notes: >-
-          Lights the LEDs only while the sensor's STROBE and the board's LED enable
-          are both high. Circuit still to be designed; its MOSFET must switch fully at 1.8 V.
+          1.8 V side from the P-Board's I/O rail, 3.3 V side from the board. Three of its four
+          channels: FSYNC, TRIG and STROBE.
+      - id: driver
+        name: "IR LED driver: 74HCT08 AND gate + IRLB8721 MOSFET"
+        notes: >-
+          Lights the LEDs only while the sensor's STROBE and the board's LED enable are both high.
+          74HCT08 on 5 V; 100 Ω gate resistor; 100 kΩ pull-downs on the gate and on LED enable
+          keep the IR off at power-up. Schematic in docs/vd55g1-esp32p4.md.
       - id: leds
-        name: 940 nm IR LEDs (850 nm with the clear module)
-        notes: Current set by a resistor.
+        name: 2 × Vishay TSAL6400 940 nm IR LEDs + series resistor
+        notes: >-
+          From 5 V: 120 Ω for 20 mA, 47 Ω for 50 mA. Start at 20 mA and measure at the eye.
+          With the clear module: 850 nm LEDs and an 830 nm long-pass filter.
       - id: sync
         name: Sync line
         notes: The rig's TTL, or the master's SYNC_OUT; also every camera's trigger in exposure-locked mode.
@@ -76,25 +81,29 @@ builds:
           - "I2C: SDA {PIN_I2C_SDA}, SCL {PIN_I2C_SCL}"
       - from: pboard
         to: shift
-        signals: ["FSYNC_OUT, sensor GPIO{SENSOR_IO_FSYNC_OUT:value}"]
+        signals:
+          - "FSYNC_OUT, sensor GPIO{SENSOR_IO_FSYNC_OUT:value}"
+          - "STROBE, sensor GPIO{SENSOR_IO_STROBE:value}"
+          - "1.8 V I/O rail → VA"
+
       - from: shift
         to: board
         signals: ["FSYNC → {PIN_FSYNC}"]
       - from: board
         to: shift
-        signals: ["{PIN_TRIG_OUT} → TRIG"]
+        signals: ["{PIN_TRIG_OUT} → TRIG", "3V3 → VB, GND"]
       - from: shift
         to: pboard
         signals: ["EXTSYNC, sensor GPIO{SENSOR_IO_EXTSYNC:value}"]
-      - from: pboard
+      - from: shift
         to: driver
-        signals: ["STROBE, sensor GPIO{SENSOR_IO_STROBE:value}"]
+        signals: ["STROBE (3.3 V) → 74HCT08"]
       - from: board
         to: driver
-        signals: ["{PIN_LED_EN} → LED enable"]
+        signals: ["{PIN_LED_EN} → LED enable (74HCT08)", "5 V, GND"]
       - from: driver
         to: leds
-        signals: ["LED current"]
+        signals: ["MOSFET drain ← LED cathodes; LEDs from 5 V"]
       - from: sync
         to: board
         signals: ["SYNC_IN → {PIN_SYNC_IN}"]
