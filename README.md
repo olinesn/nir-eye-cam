@@ -2,6 +2,7 @@
 
 [![Firmware](https://github.com/olinesn/nir-eye-cam/actions/workflows/firmware.yml/badge.svg?branch=main)](https://github.com/olinesn/nir-eye-cam/actions/workflows/firmware.yml)
 [![Host tests](https://github.com/olinesn/nir-eye-cam/actions/workflows/host.yml/badge.svg?branch=main)](https://github.com/olinesn/nir-eye-cam/actions/workflows/host.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Small near-infrared cameras for mouse pupil and eye imaging. Each camera is a
 Himax HM01B0 monochrome sensor (Arducam's Pico module) on a Seeed XIAO
