@@ -52,8 +52,9 @@ high-speed port; logs go to the board's UART / USB-serial-JTAG console.
 
 ## Bring-up order
 
-1. `INFO` over the serial port. `model_id` should read `0x53354733` (rev 3).
-   Rev 2 (`0x53354731`) needs ST's firmware patch, which is not included.
+1. `INFO` over the serial port. `model_id` should read `0x53354731` (every
+   VD55G1) and `revision` `0x3030` (cut 3). Cut 2 (`0x2020`) needs ST's
+   firmware patch, which is not included.
 2. `START`, then record a few seconds with `nireyecam-record --cam p4=PORT
    --preview`. Check `csi_errors` in `INFO` stays 0.
 3. Confirm the timestamps. `INFO` and `frames.csv` should show one FSYNC per
@@ -67,7 +68,9 @@ high-speed port; logs go to the board's UART / USB-serial-JTAG console.
 
 - `EXTSYNC` returns an error until the UM3224 register sequence is
   implemented. Without it, cameras free-run and are aligned by timestamps.
-- Rev 2 sensors need ST's firmware patch, which is not included.
+- Cut 2 sensors need ST's firmware patch, which is not included. Cut 3 boots
+  without it, as in ST's STM32 middleware; VERIFY that it streams correctly
+  (the mainline Linux driver patches every VD55G1).
 - `LED` is on/off (brightness set by the resistor); the sensor's STROBE
   decides when the LEDs are actually lit.
 - Changing `RES` re-creates the CSI controller; `ROI` only moves the crop.

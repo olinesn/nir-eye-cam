@@ -21,6 +21,15 @@ To release:
 
 ## [Unreleased]
 
+### Fixed
+
+- ESP32-P4 firmware: the VD55G1 would never have booted. The firmware read
+  model ID `0x53354731` as "revision 2, needs a patch" and refused it, but
+  every VD55G1 reads `0x53354731`; `0x53354733` is the VD55G4 / VD65G4, which
+  it accepted instead. The silicon cut is now read from register `0x0004`:
+  cut 3 (`0x3030`) boots, and cut 2 (`0x2020`) still needs ST's patch. `INFO`
+  reports it as `revision`.
+
 ## [0.1.0] - 2026-10-14
 
 ### Added

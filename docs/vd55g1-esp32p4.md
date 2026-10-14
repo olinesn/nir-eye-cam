@@ -116,10 +116,12 @@ them and the ESP32-P4, and make the LED MOSFET's gate threshold safe at 1.8 V
   - crop: X start/width `0x0514`/`0x0516`, Y start/height `0x0510`/`0x0512`;
   - manual exposure `0x0502`, analog gain `0x0501`.
 
-  **Revision-2 silicon needs a firmware patch blob** written to `0x2000`
-  before boot; revision 3 does not. The Linux driver carries that blob but is
-  GPL-2.0. ST's STM32 camera middleware also supports this module, so check
-  its license as a source instead.
+  **Cut-2 silicon needs a firmware patch blob** written to `0x2000` before
+  boot; cut 3 does not, in ST's STM32 camera middleware. **VERIFY**: the
+  mainline Linux driver patches every VD55G1. Both cuts report model ID
+  `0x53354731`; the cut is in `0x0004` (`0x2020` = cut 2, `0x3030` = cut 3).
+  The Linux driver carries the blob but is GPL-2.0. ST's STM32 camera
+  middleware carries it too, so check its license as a source instead.
 - **Capture:** `esp_cam_ctlr_csi` with `data_lane_num = 1`,
   `input_data_color_type = CAM_CTLR_COLOR_RAW8`. **VERIFY** that the CSI path
   can hand RAW8 to memory unconverted: Espressif's example converts RAW8 →
@@ -169,6 +171,8 @@ were not raw vendor bulk. **VERIFY** by measuring early. The 320 × 320 crop at
 - ST CAM-55G1 data brief DB5267 rev 2 (module optics, sizes, connector, rails)
 - ST VD55G1 datasheet; UM3224 "How to integrate and configure the VD55G1 sensor"
 - Linux `drivers/media/i2c/vd55g1.c` (register map, GPIO modes, boot/patch)
+- ST `stm32-mw-camera` on GitHub, `sensors/vd55g1` (model ID, silicon cut,
+  which cut needs the patch)
 - ST STEVAL-CAM-M0I (P-Board)
 - ESP-IDF camera controller driver docs (ESP32-P4); esp_video UVC example
 - Waveshare ESP32-P4-NANO docs

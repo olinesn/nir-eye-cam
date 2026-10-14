@@ -66,5 +66,5 @@ Same packets and the same commands, with these differences
 | `TRIG <hz>` | new: frame-trigger square wave on TRIG_OUT (0 = off) |
 | `EXTSYNC <0\|1>` | new: start frames on the sensor's GPIO0 (not implemented yet) |
 
-`INFO` adds `sensor`, `model_id`, `x`, `y`, `line_time_ns`,
+`INFO` adds `sensor`, `model_id`, `revision`, `x`, `y`, `line_time_ns`,
 `frame_period_us`, `dgain`, `trig_hz`, `extsync` and `csi_errors`.

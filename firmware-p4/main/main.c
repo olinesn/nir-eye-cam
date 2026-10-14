@@ -133,12 +133,12 @@ static int reply_info(void)
 {
     bool ok = cam_ok();
     return reply("OK INFO {\"fw\":\"%s\",\"board\":\"%s\",\"uid\":\"%s\",\"sensor\":\"vd55g1\","
-          "\"model_id\":\"0x%08lx\",\"cam_ok\":%d,\"cam_error\":\"%s\","
+          "\"model_id\":\"0x%08lx\",\"revision\":\"0x%04x\",\"cam_ok\":%d,\"cam_error\":\"%s\","
           "\"width\":%u,\"height\":%u,\"x\":%u,\"y\":%u,\"exposure\":%u,\"frame_length\":%u,"
           "\"line_time_ns\":%lu,\"frame_period_us\":%lu,\"again\":%u,\"dgain\":%u,\"ae\":%d,"
           "\"led\":%d,\"syncgen\":%d,\"trig_hz\":%lu,\"extsync\":%d,\"streaming\":%d,"
           "\"slots\":%lu,\"csi_errors\":%lu,\"sync_edges\":%lu,\"sync_overflows\":%lu}",
-          FW_VERSION, NEC_BOARD_NAME, s_uid, (unsigned long)s_sensor.model_id, ok,
+          FW_VERSION, NEC_BOARD_NAME, s_uid, (unsigned long)s_sensor.model_id, (unsigned)s_sensor.revision, ok,
           ok ? "" : esp_err_to_name(s_cam_err), s_sensor.w, s_sensor.h, s_sensor.x, s_sensor.y,
           s_sensor.exposure, s_sensor.frame_length,
           (unsigned long)(ok ? vd55g1_line_time_ns(&s_sensor) : 0),

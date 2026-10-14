@@ -1,8 +1,11 @@
 // ST VD55G1 (804 x 704 mono global shutter) over I2C.
 //
-// Written from the register map and sequences in ST's documentation and the
-// mainline Linux driver (drivers/media/i2c/vd55g1.c, used as a reference for
-// register addresses and values; no code copied).
+// Written from the register map and sequences in ST's documentation, the
+// mainline Linux driver (drivers/media/i2c/vd55g1.c) and ST's own Linux
+// driver (github.com/STMicroelectronics/vd55g1-linux-driver), both used as a
+// reference for register addresses and values; no code copied. The model and
+// revision IDs follow ST's STM32 camera middleware
+// (github.com/STMicroelectronics/stm32-mw-camera, sensors/vd55g1).
 
 #pragma once
 
@@ -25,6 +28,7 @@ typedef struct {
     i2c_master_bus_handle_t bus;
     i2c_master_dev_handle_t dev;
     uint32_t model_id;
+    uint16_t revision;        // silicon cut: 0x3030 = cut 3
     uint32_t ext_clk_hz;
     uint32_t mipi_bps;
     uint32_t pixel_clock_hz;
