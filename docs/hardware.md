@@ -268,6 +268,68 @@ while rotating, up to 40 rpm. They come with HDMI + 4-pin Molex, 2 × PZN-12,
 3. **Wireless.** The ESP32-P4 has no radio, and a 100 mAh battery runs ~1 W
    for only ~20 minutes, on a mouse.
 
+### Camera cable through the 4-pin port (draft)
+
+Option 1 as two cables, one on each side of the joint. Nothing is built yet:
+**VERIFY** all of it on the bench.
+
+    PC ─USB-A─ fixed-side cable, ~1 m ─ Molex ▸ stator | joint | rotor ◂ Molex ─ tether, ~1 m ─ camera
+
+| Molex circuit | Signal | USB-A pin | Wire | USB-C plug at the camera, if used |
+|---|---|---|---|---|
+| 1 | VBUS | 1 | red | A4, A9, B4, B9 |
+| 2 | GND | 4 | black | A1, A12, B1, B12 |
+| 3 | D+ | 3 | green | A6 |
+| 4 | D− | 2 | white | A7 |
+
+- **Both Molex ends are wired the same.** In a 2 × 2 housing, circuits 1–2
+  (power) and 3–4 (data) are neighbours whichever way the rows are numbered,
+  so the data pair stays together through the connector.
+- **No CC wire.** The USB-A end needs none. On a USB-C plug at the camera,
+  leave CC (A5) open: the board takes VBUS directly.
+- **Fixed-side cable:** a generic USB 2.0 cable with a USB-A plug, its far end
+  replaced by Micro-Fit terminals. Fold the braid back and insulate it at the
+  Molex end; it stays connected to the USB-A shell. Check the colours with a
+  meter first: cheap cables do not always follow them.
+- **Tether:** four fine-stranded 30 AWG wires, the thinnest the small
+  Micro-Fit terminals take. Twist D+ with D−, and VBUS with GND, and leave
+  under 1 cm untwisted at each crimp. Estimated ~4.5 V at the camera at
+  250 mA, ~4.25 V during strobes. Run it with the Neuropixels cable so the
+  joint's torque sensor follows both (through the torque-sensor loop if the
+  fiber is unused, Doric manual Table 2.1). On the head, solder it to pads on
+  the carrier: a captive cable (USB-C specification §3.4.3) is lighter than
+  any USB connector.
+- **Parts** (**VERIFY** against Molex's drawings). If the joint's port shows
+  pins: receptacle housing 43025-0400 with female 43030 terminals (43030-0010
+  tin or 43030-0012 gold for 26–30 AWG, per RS listings). If it shows
+  sockets: plug housing 43020-0401 with male 43031 terminals.
+
+Bench checks, in order:
+
+1. **Map the joint** with a meter: each rotor circuit to the same stator
+   circuit, under 0.5 Ω, no pin-to-pin shorts, at several rotation angles. If
+   the map is not pin for pin, wire the fixed-side cable to match it.
+2. **Each cable end to end:** right circuit at each end, no shorts.
+3. **Power only:** the fixed-side cable into the PC, nothing on the rotor.
+   Expect ~5 V between circuits 1 and 2 and ~0 V on 3 and 4. Mate the Molex
+   plugs first and the USB-A last: a USB plug's power pins touch before its
+   data pins (USB 2.0 §7.2.4.1), and nothing guarantees that order at the
+   Molex.
+4. **With the camera:** it enumerates at full speed, and VBUS at the camera
+   stays above ~4.2 V while streaming with the LEDs on. Then stream while
+   turning the joint by hand, and look for gaps in `seq`.
+
+**No wire is left for SYNC.** USB takes all four contacts, so the camera's
+SYNC input has no path through the joint. Decide before designing the head
+carrier:
+
+- **A spare HDMI contact.** Neuropixels likely uses only a few of the 19. This
+  needs Doric to say which ones its Neuropixels adapter uses, and a small
+  pass-through adapter that taps a free one.
+- **An optical code.** A dim IR LED on the rig blinks the random sync pattern
+  where the camera can see it. No wire, but the sync would then come from
+  image brightness, which `nireyecam-align` does not read yet.
+
 ### Sources
 
 - IMEC [Neuropixels PXIe Control System datasheet](https://www.neuropixels.org/_files/ugd/328966_790b2b46eceb4e6db0ad41aaef2b3364.pdf)
@@ -276,14 +338,21 @@ while rotating, up to 40 rpm. They come with HDMI + 4-pin Molex, 2 × PZN-12,
   [Neuropixels cable repair](https://dx.doi.org/10.17504/protocols.io.q26g7q358lwz/v1),
   protocols.io.
 - [USB 2.0 specification](https://www.usb.org/document-library/usb-20-specification):
-  §7.1.1.1 (90 Ω ±15%), §7.1.5.1 (pull-up only with VBUS), §7.1.16 (cable
-  delay), Table 7-6 (cable loss), §7.2.2 (voltage drop). [USB Type-C specification](https://www.usb.org/document-library/usb-type-cr-cable-and-connector-specification-release-25)
-  R2.5: Table 3-1 (cable lengths), Table 3-11 (USB 2.0 cable wiring), Table
-  3-15 (USB-C to USB 2.0 Standard-B), §4.4.1 (IR drop).
+  Table 6-1 and Figure 6-11 (pins, wire colours), §7.1.1.1 (90 Ω ±15%),
+  §7.1.5.1 (pull-up only with VBUS), §7.1.16 (cable delay), Table 7-6 (cable
+  loss), §7.2.2 (voltage drop), §7.2.4.1 (power pins touch first).
+  [USB Type-C specification](https://www.usb.org/document-library/usb-type-cr-cable-and-connector-specification-release-25)
+  R2.5: Table 3-1 (cable lengths), Table 3-11 (USB 2.0 cable wiring), §3.4.3
+  (captive cables), Table 3-15 (USB-C to USB 2.0 Standard-B), §4.4.1 (IR
+  drop).
 - Doric Lenses [Assisted Electrical Rotary Joints, 24 contacts](https://neuro.doriclenses.com/collections/electrical-rotary-joints/products/assisted-electrical-rotary-joints-24-contacts)
   and [Assisted 1x1 Fiber-optic & Electric Rotary Joints, 24 contacts](https://neuro.doriclenses.com/products/assisted-fiber-optic-electric-rotary-joints-1)
   product pages, and the [user manual](https://www.doriclenses.com/downloads/UserManual/UserManual_ARJ_24_V1.0.0.pdf)
-  v1.0.0 for both; [Neuropixels Adapter](https://neuro.doriclenses.com/products/adapter-hdmi-Neuropixels).
+  v1.0.0 for both (Table 2.1: torque-sensor loop); [Neuropixels Adapter](https://neuro.doriclenses.com/products/adapter-hdmi-Neuropixels).
+- Molex [Micro-Fit 3.0 43025 series](https://www.molex.com/en-us/products/series-chart/43025)
+  (receptacle housings). RS listing for the
+  [43030-0010](https://uk.rs-online.com/web/p/crimp-contacts/2333021) crimp
+  terminal (26–30 AWG).
 - Espressif [ESP32-P4 datasheet](https://documentation.espressif.com/esp32-p4-chip-revision-v1.3_datasheet_en.html),
   Table 5-7. TI [DS90UB953-Q1](https://www.ti.com/product/DS90UB953-Q1)
   product page. Open Ephys ONIX docs,

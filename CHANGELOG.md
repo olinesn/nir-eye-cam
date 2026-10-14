@@ -31,6 +31,9 @@ To release:
   lost over a thin tether, summarizes Doric's 24-contact commutator, and ranks
   the options: the camera's own cable through the joint's 4-pin auxiliary
   port at full speed first, then a serializer over one pair, then wireless.
+  A draft of that camera cable gives the pin map, the two cables, the bench
+  checks, and the open question of where the SYNC line goes, since USB takes
+  all four contacts.
 
 ## [0.2.0] - 2026-10-14
 
