@@ -1,5 +1,6 @@
-# The recommended parts of each build, and how they connect: the one source
-# for the "Parts and wiring" section of README.md. Edit this file (or a pin
+# The recommended parts of the ESP32-P4 build, and how they connect: the one
+# source for the "Parts and wiring" section of README.md. (The original RP2040
+# build is documented in docs/hardware.md, not drawn.) Edit this file (or a pin
 # header), then run
 #
 #   python3 scripts/wiring.py
@@ -13,65 +14,6 @@
 # bare number. A part without links is listed but not drawn (lenses, filters).
 
 builds:
-  - id: rp2040
-    title: "RP2040 build: Arducam HM01B0 + XIAO RP2040"
-    pins: firmware/src/board_pins.h
-    variant: NEC_BOARD_XIAO # the #if branch of the pin header to read
-    pin_format: "GP{value} ({note})"
-    about: >-
-      Time-aligned, not exposure-synchronized: the module has no trigger
-      input. Pins are the XIAO's; the Pico's are in docs/hardware.md.
-    parts:
-      - id: cam
-        name: Arducam HM01B0 QVGA camera module for Raspberry Pi Pico
-        notes: 320 × 320 mono, 8-pin header, 3.3 V. Swap its lens (below).
-      - id: mcu
-        name: Seeed XIAO RP2040
-        notes: Or a Raspberry Pi Pico. Firmware `nir-eye-cam-…-xiao-rp2040.uf2` (or `-pico.uf2`).
-      - id: fet
-        name: Logic-level N-MOSFET (AO3400 or 2N7000)
-        notes: 100 Ω gate resistor, 100 kΩ gate pull-down so the IR stays off while the board boots.
-      - id: leds
-        name: 850 nm IR LEDs (1–4) + current resistor
-        notes: The resistor sets the maximum light, e.g. 2 LEDs in series from 5 V at 20 mA → 100 Ω.
-      - id: sync
-        name: Sync line
-        notes: Every camera's SYNC_IN, and the master's SYNC_OUT, or the rig's TTL (a 5 V TTL needs a 10 kΩ / 20 kΩ divider).
-      - id: pc
-        name: Computer
-        notes: "`nireyecam-record`, or campy with `cameraMake: ratcam`."
-      - id: lens
-        name: Lens f ≈ 5–8 mm (M8 or M12) + 3D-printed holder
-        notes: Replaces the stock lens, which cannot frame a mouse eye.
-      - id: filter
-        name: 780–830 nm long-pass filter
-        notes: In front of the lens, so only the IR LEDs light the image.
-    links:
-      - from: cam
-        to: mcu
-        signals:
-          - "VSYNC → {NEC_PIN_VSYNC}"
-          - "HREF → {NEC_PIN_HSYNC}"
-          - "PCLK → {NEC_PIN_PCLK}"
-          - "D0 → {NEC_PIN_D0}"
-          - "SDA ↔ {NEC_PIN_SDA}, SCL ← {NEC_PIN_SCL}"
-          - "VCC ← 3V3, GND"
-      - from: mcu
-        to: fet
-        signals: ["{NEC_PIN_LED} → gate (PWM)"]
-      - from: fet
-        to: leds
-        signals: ["drain ← LED cathodes; LEDs from 5 V"]
-      - from: sync
-        to: mcu
-        signals: ["SYNC_IN → {NEC_PIN_SYNC_IN}"]
-      - from: mcu
-        to: sync
-        signals: ["{NEC_PIN_SYNC_OUT} → SYNC_OUT (sync master only)"]
-      - from: mcu
-        to: pc
-        signals: ["USB full speed (12 Mbit/s)"]
-
   - id: esp32p4
     title: "ESP32-P4 build: ST VD55G1 + ESP32-P4X-Function-EV-Board"
     pins: firmware-p4/main/board.h

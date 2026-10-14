@@ -24,7 +24,8 @@ To release:
 ### Added
 
 - README: a **Parts and wiring** section with a diagram and a parts table for
-  each build (RP2040 + HM01B0, ESP32-P4X + VD55G1). It is drawn by
+  the ESP32-P4 build (ESP32-P4X-Function-EV-Board + ST VD55G1); the original
+  RP2040 build stays in `docs/hardware.md`. It is drawn by
   `scripts/wiring.py` from `docs/wiring.yml` and the firmware's pin headers,
   so a pin moved in the firmware moves in the diagram. A pre-commit check
   (run in CI) fails while the README is out of date, or when
