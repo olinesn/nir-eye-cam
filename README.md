@@ -6,38 +6,52 @@
 [![License: Princeton](https://img.shields.io/badge/license-Princeton-orange.svg)](LICENSE)
 [![Code owners: @olinesn](https://img.shields.io/badge/code%20owners-%40olinesn-blue.svg)](.github/CODEOWNERS)
 
-Small near-infrared cameras for mouse pupil and eye imaging. Each camera is a
-Himax HM01B0 monochrome sensor (Arducam's Pico module) on a Seeed XIAO
-RP2040 or Raspberry Pi Pico, streaming 8-bit frames over USB. Several cameras
-record to one timeline through a shared sync wire.
+Small near-infrared cameras for mouse pupil and eye imaging. Each camera is
+an ST VD55G1 global-shutter monochrome sensor on an ESP32-P4, which streams
+8-bit frames to the computer over USB 2.0 high speed. Several cameras record
+to one timeline through a shared sync wire, and the sensor's external-sync
+input should let every camera start its exposure on the same pulse (not yet
+verified on hardware). The original, simpler build, a Himax HM01B0 (Arducam's
+Pico module) on a Seeed XIAO RP2040 or Raspberry Pi Pico, speaks the same
+protocol and works with the same host tools.
 
 ```
-firmware/   RP2040 firmware (Pico SDK, C): continuous capture, per-frame
-            timestamps, sync in/out, IR LED PWM, USB serial streaming
-firmware-p4/  ESP32-P4 firmware (ESP-IDF, C) for the VD55G1 global-shutter
-            build: MIPI CSI-2 capture, same protocol (compiles; not yet run)
-common/     nec_protocol.h, the packet format both firmwares share
+firmware-p4/  ESP32-P4 firmware (ESP-IDF, C) for the VD55G1 build: MIPI CSI-2
+            capture, frame and sync timestamps, external sync, IR strobe,
+            USB 2.0 high-speed streaming (compiles; not yet run)
 host/       Python: nireyecam-record, nireyecam-align, nireyecam-list,
             nireyecam-bench, nireyecam-sensortest, plus a simulated camera
             for testing without hardware
-docs/       hardware.md (parts, wiring, optics, sync, safety, tether, depth),
-            protocol.md, design sketches for the VD55G1 builds, and the
-            dual-colour miniscope (miniscope.md, sensor-bench-test.md)
+docs/       vd55g1-esp32p4.md (the ESP32-P4 build), vd55g1-fpdlink.md (a
+            serializer head for freely moving animals), wiring.yml (the
+            parts and wiring drawn below), hardware.md (illumination and
+            safety, sync, tether, depth, and the RP2040 build), protocol.md,
+            and the dual-colour miniscope (miniscope.md, sensor-bench-test.md)
+firmware/   RP2040 firmware for the original HM01B0 build (Pico SDK, C)
+common/     nec_protocol.h, the packet format both firmwares share
 ```
 
-Read [docs/hardware.md](docs/hardware.md) first. In particular, the cameras
-are **time-aligned, not exposure-synchronized**. The Arducam module has no
-trigger input, so each camera free-runs and every frame is timestamped
-instead.
+Read [docs/vd55g1-esp32p4.md](docs/vd55g1-esp32p4.md) first for the
+ESP32-P4 build (parts, optics, sync, bring-up plan), and
+[docs/hardware.md](docs/hardware.md) for illumination and safety. The
+RP2040 build is in hardware.md too: its cameras are **time-aligned, not
+exposure-synchronized**, since the Arducam module has no trigger input.
 
 ## Status
 
+- **ESP32-P4 firmware:** compiles with ESP-IDF v6.1 and esp_tinyusb 2.4 with
+  no warnings, and its pin map is set for the ESP32-P4X-Function-EV-Board,
+  but it has **not yet run on hardware**. The first checks, in
+  [firmware-p4/README.md](firmware-p4/README.md)'s order: the P-Board
+  (lane polarity, the cable, power enable), then the sensor's boot and model
+  ID, RAW8 frames over CSI, USB high-speed throughput, frame timestamps, and
+  external sync. `nireyecam-bench` runs most of them.
 - **Host software:** tested against the simulator (`pytest` in `host/`):
   protocol, command replies, recording, and alignment against ground truth
   with clock drift and a missed sync pulse.
-- **RP2040 firmware:** compiles with no warnings (`-Wall -Wextra`, Pico SDK
-  2.3.1, Arm GNU Toolchain 14.3.rel1) for both boards, but has **not yet run
-  on hardware**. Expect first-bring-up fixes. Points to check on the bench:
+- **RP2040 firmware (original build):** compiles with no warnings
+  (`-Wall -Wextra`, Pico SDK 2.3.1, Arm GNU Toolchain 14.3.rel1) for both
+  boards, but has **not yet run on hardware**. Expect first-bring-up fixes. Points to check on the bench:
   - the measured frame rate (it depends on the module's oscillator);
   - USB throughput at 160×120;
   - the analog-gain register bits (`0x0205[6:4]`, from the Himax register
@@ -106,8 +120,24 @@ flowchart LR
 
 GitHub Actions builds both firmwares on every push or pull request that
 touches them ([.github/workflows/firmware.yml](.github/workflows/firmware.yml)),
-fails on any compiler warning, and attaches the `.uf2` / `.bin` files to the
+fails on any compiler warning, and attaches the `.bin` / `.uf2` files to the
 run as artifacts. To build locally:
+
+### ESP32-P4
+
+With ESP-IDF v6.1 installed
+([Espressif's guide](https://docs.espressif.com/projects/esp-idf/en/stable/esp32p4/get-started/)):
+
+```bash
+cd firmware-p4 && . ~/esp/esp-idf/export.sh
+idf.py set-target esp32p4
+idf.py build        # -> build/nir_eye_cam_p4.bin, with the bootloader and partition table
+```
+
+[firmware-p4/README.md](firmware-p4/README.md) has the rest: the board, its
+pin map and wiring, and what to check before first power-up.
+
+### RP2040 (original build)
 
 One-time setup (what this repo was built with): CMake and Ninja from
 Homebrew, Arm's GNU toolchain for macOS (the full one with newlib, unpacked
@@ -142,13 +172,45 @@ on `main` (GitHub keeps them for 90 days):
 
 ```bash
 run=$(gh run list -R olinesn/nir-eye-cam -w firmware.yml -b main -s success -L 1 --json databaseId -q '.[0].databaseId')
-gh run download "$run" -R olinesn/nir-eye-cam -n nir-eye-cam-xiao -D fw-xiao
+gh run download "$run" -R olinesn/nir-eye-cam -n nir-eye-cam-esp32p4 -D fw-esp32p4
 ```
 
-For the other boards use `-n nir-eye-cam-pico -D fw-pico` or
-`-n nir-eye-cam-esp32p4 -D fw-esp32p4`.
+For the RP2040 boards use `-n nir-eye-cam-xiao -D fw-xiao` or
+`-n nir-eye-cam-pico -D fw-pico`. Each release also attaches these files
+(`nir-eye-cam-vX.Y.Z-esp32p4.zip`, and the two `.uf2`).
 
-### RP2040 (XIAO or Pico): drag and drop
+### ESP32-P4: esptool
+
+The ESP32-P4X-Function-EV-Board has three Type-C ports. Flash through the
+one labelled **USB Serial/JTAG**, which also carries the logs; the camera
+streams frames on the one labelled **USB 2.0**, the high-speed port. Other
+ESP32-P4 boards have the same pair: a UART or USB Serial/JTAG port for
+flashing, and the high-speed OTG port. To find the flashing port's name,
+compare `ls /dev/cu.*` before and after plugging it in: USB Serial/JTAG shows
+up as `/dev/cu.usbmodem…`, a USB-to-UART bridge as `/dev/cu.usbserial-…`.
+
+From your own build (ESP-IDF loaded):
+
+```bash
+cd firmware-p4 && . ~/esp/esp-idf/export.sh
+idf.py -p /dev/cu.usbmodemXXXX flash monitor   # Ctrl-] leaves the monitor
+```
+
+From a CI download (no ESP-IDF needed: `uvx` runs esptool without
+installing it, or use `pip install esptool`):
+
+```bash
+cd fw-esp32p4
+uvx esptool --chip esp32p4 -p /dev/cu.usbmodemXXXX -b 460800 --before default-reset --after hard-reset write-flash @flash_args
+```
+
+`flash_args` lists the bootloader, partition table and app with their
+addresses. If the board does not enter download mode by itself, hold
+**BOOT**, press **RESET**, release **BOOT**, and run the command again. Then
+plug the computer into the **USB 2.0** port: `nireyecam-list` should show
+"NIR Eye Cam".
+
+### RP2040 (original build): drag and drop
 
 1. Put the board in its USB bootloader:
    - **XIAO RP2040:** hold **B** (BOOT) while plugging in USB. If it is
@@ -169,36 +231,6 @@ bootloader" USB command, so the button is the way in. From the command line
 instead, `brew install picotool`, then with the board in bootloader mode
 `picotool load -x fw-xiao/nir_eye_cam_xiao.uf2`. (The picotool the Pico SDK
 builds for itself has no USB support and cannot flash.)
-
-### ESP32-P4: esptool
-
-ESP32-P4 boards usually have two USB connections:
-- a **UART / USB-serial-JTAG** port, used for flashing and logs;
-- the **USB 2.0 high-speed (OTG)** port this firmware streams frames on.
-
-Flash through the first one. To find its name, compare `ls /dev/cu.*`
-before and after plugging it in.
-
-From your own build (ESP-IDF loaded):
-
-```bash
-cd firmware-p4 && . ~/esp/esp-idf/export.sh
-idf.py -p /dev/cu.usbserial-XXXX flash monitor   # Ctrl-] leaves the monitor
-```
-
-From a CI download (no ESP-IDF needed: `uvx` runs esptool without
-installing it, or use `pip install esptool`):
-
-```bash
-cd fw-esp32p4
-uvx esptool --chip esp32p4 -p /dev/cu.usbserial-XXXX -b 460800 --before default-reset --after hard-reset write-flash @flash_args
-```
-
-`flash_args` lists the bootloader, partition table and app with their
-addresses. If the board does not enter download mode by itself, hold
-**BOOT**, press **RESET**, release **BOOT**, and run the command again. Then
-plug the high-speed port into the computer: `nireyecam-list` should show
-"NIR Eye Cam".
 
 ## Record
 

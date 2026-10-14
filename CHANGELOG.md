@@ -21,6 +21,15 @@ To release:
 
 ## [Unreleased]
 
+### Changed
+
+- README: leads with the ESP32-P4 build, which is the one being built. The
+  opening paragraph, the folder overview, the status list, and the Build and
+  Flash sections now put it first; the HM01B0 + RP2040 build follows as the
+  original, simpler build. Flashing on the ESP32-P4X-Function-EV-Board goes
+  through its USB Serial/JTAG port (`/dev/cu.usbmodem…`), and the camera
+  streams on its USB 2.0 port.
+
 ### Added
 
 - README: a **Parts and wiring** section with a diagram and a parts table for
