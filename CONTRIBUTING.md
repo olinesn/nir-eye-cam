@@ -96,6 +96,14 @@ desynchronizes the recorder. A new command also goes into:
 - `docs/protocol.md`;
 - the simulator, if the host uses it.
 
+**Parts and pins: one source each.** README.md's "Parts and wiring" diagrams
+are drawn by `scripts/wiring.py` from `docs/wiring.yml` (which parts, and
+what connects to what) and from the pin headers (`firmware/src/board_pins.h`,
+`firmware-p4/main/board.h`). To change a recommended part, edit
+`docs/wiring.yml`; to move a pin, edit the header. Then run
+`python3 scripts/wiring.py`. pre-commit fails while the README is out of
+date, or when `docs/wiring.yml` names a pin the firmware does not define.
+
 **The simulator stands in for the hardware.** The host tests drive it
 exactly as they would a real camera. If you change firmware behavior the host
 depends on, update `simulator.py` to match, or the tests keep passing against

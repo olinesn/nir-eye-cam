@@ -1,0 +1,160 @@
+# The recommended parts of each build, and how they connect: the one source
+# for the "Parts and wiring" section of README.md. Edit this file (or a pin
+# header), then run
+#
+#   python3 scripts/wiring.py
+#
+# to redraw that section. pre-commit, and so CI, fails while README.md is out
+# of date, or when this file names a pin the firmware does not define.
+#
+# In a link's signals, {MACRO} is that pin as the firmware defines it, written
+# with the build's pin_format ({value} = the number, {note} = the first word
+# of the macro line's comment, e.g. a header pin), and {MACRO:value} is the
+# bare number. A part without links is listed but not drawn (lenses, filters).
+
+builds:
+  - id: rp2040
+    title: "RP2040 build: Arducam HM01B0 + XIAO RP2040"
+    pins: firmware/src/board_pins.h
+    variant: NEC_BOARD_XIAO # the #if branch of the pin header to read
+    pin_format: "GP{value} ({note})"
+    about: >-
+      Time-aligned, not exposure-synchronized: the module has no trigger
+      input. Pins are the XIAO's; the Pico's are in docs/hardware.md.
+    parts:
+      - id: cam
+        name: Arducam HM01B0 QVGA camera module for Raspberry Pi Pico
+        notes: 320 × 320 mono, 8-pin header, 3.3 V. Swap its lens (below).
+      - id: mcu
+        name: Seeed XIAO RP2040
+        notes: Or a Raspberry Pi Pico. Firmware `nir-eye-cam-…-xiao-rp2040.uf2` (or `-pico.uf2`).
+      - id: fet
+        name: Logic-level N-MOSFET (AO3400 or 2N7000)
+        notes: 100 Ω gate resistor, 100 kΩ gate pull-down so the IR stays off while the board boots.
+      - id: leds
+        name: 850 nm IR LEDs (1–4) + current resistor
+        notes: The resistor sets the maximum light, e.g. 2 LEDs in series from 5 V at 20 mA → 100 Ω.
+      - id: sync
+        name: Sync line
+        notes: Every camera's SYNC_IN, and the master's SYNC_OUT, or the rig's TTL (a 5 V TTL needs a 10 kΩ / 20 kΩ divider).
+      - id: pc
+        name: Computer
+        notes: "`nireyecam-record`, or campy with `cameraMake: ratcam`."
+      - id: lens
+        name: Lens f ≈ 5–8 mm (M8 or M12) + 3D-printed holder
+        notes: Replaces the stock lens, which cannot frame a mouse eye.
+      - id: filter
+        name: 780–830 nm long-pass filter
+        notes: In front of the lens, so only the IR LEDs light the image.
+    links:
+      - from: cam
+        to: mcu
+        signals:
+          - "VSYNC → {NEC_PIN_VSYNC}"
+          - "HREF → {NEC_PIN_HSYNC}"
+          - "PCLK → {NEC_PIN_PCLK}"
+          - "D0 → {NEC_PIN_D0}"
+          - "SDA ↔ {NEC_PIN_SDA}, SCL ← {NEC_PIN_SCL}"
+          - "VCC ← 3V3, GND"
+      - from: mcu
+        to: fet
+        signals: ["{NEC_PIN_LED} → gate (PWM)"]
+      - from: fet
+        to: leds
+        signals: ["drain ← LED cathodes; LEDs from 5 V"]
+      - from: sync
+        to: mcu
+        signals: ["SYNC_IN → {NEC_PIN_SYNC_IN}"]
+      - from: mcu
+        to: sync
+        signals: ["{NEC_PIN_SYNC_OUT} → SYNC_OUT (sync master only)"]
+      - from: mcu
+        to: pc
+        signals: ["USB full speed (12 Mbit/s)"]
+
+  - id: esp32p4
+    title: "ESP32-P4 build: ST VD55G1 + ESP32-P4X-Function-EV-Board"
+    pins: firmware-p4/main/board.h
+    pin_format: "GPIO{value} ({note})"
+    about: >-
+      Global shutter, and exposure-locked sync through EXTSYNC. Nothing here has
+      run on hardware yet: check the P-Board items in firmware-p4/README.md
+      before first power-up.
+    parts:
+      - id: module
+        name: ST CAM-5G1-080NIR promodule
+        notes: >-
+          VD55G1, 804 × 704 mono global shutter, 80° lens with a 940 nm bandpass filter.
+          For 850 nm light: CAM-5G1-081CLR plus an 830 nm long-pass filter.
+          CAM-5G1-160CLR (160° fisheye) is for bring-up only.
+      - id: pboard
+        name: ST STEVAL-CAM-M0I P-Board (order code STEVAL-CAM-M0I1)
+        notes: 30-pin promodule input, 22-pin FFC output, its own 12 MHz clock for the sensor.
+      - id: cable
+        name: 22-pin → 15-pin MIPI CSI ribbon cable
+        notes: Check the P-Board's pinout and lane polarity first; the ESP32-P4 cannot swap a lane's P and N.
+      - id: board
+        name: Espressif ESP32-P4X-Function-EV-Board
+        notes: Chip revision v3.1+ (what the firmware builds for). Firmware `nir-eye-cam-…-esp32p4.zip`.
+      - id: shift
+        name: 1.8 V ↔ 3.3 V level shifters (e.g. SN74LVC1T45)
+        notes: The sensor's GPIOs run at 1.8 V.
+      - id: driver
+        name: IR LED driver
+        notes: >-
+          Lights the LEDs only while the sensor's STROBE and the board's LED enable
+          are both high. Circuit still to be designed; its MOSFET must switch fully at 1.8 V.
+      - id: leds
+        name: 940 nm IR LEDs (850 nm with the clear module)
+        notes: Current set by a resistor.
+      - id: sync
+        name: Sync line
+        notes: The rig's TTL, or the master's SYNC_OUT; also every camera's trigger in exposure-locked mode.
+      - id: pc
+        name: Computer
+        notes: On the Type-C port labelled USB 2.0. Flash through the one labelled USB Serial/JTAG.
+      - id: closeup
+        name: Close-up lens f ≈ 15 mm in a 3D-printed cap
+        notes: Frames the eye; see docs/vd55g1-esp32p4.md (Optics).
+    links:
+      - from: module
+        to: pboard
+        signals: ["30-pin promodule connector"]
+      - from: pboard
+        to: cable
+        signals: ["22-pin FFC"]
+      - from: cable
+        to: board
+        signals:
+          - "15-pin camera connector: MIPI CSI-2, 1 lane"
+          - "I2C: SDA {PIN_I2C_SDA}, SCL {PIN_I2C_SCL}"
+      - from: pboard
+        to: shift
+        signals: ["FSYNC_OUT, sensor GPIO{SENSOR_IO_FSYNC_OUT:value}"]
+      - from: shift
+        to: board
+        signals: ["FSYNC → {PIN_FSYNC}"]
+      - from: board
+        to: shift
+        signals: ["{PIN_TRIG_OUT} → TRIG"]
+      - from: shift
+        to: pboard
+        signals: ["EXTSYNC, sensor GPIO{SENSOR_IO_EXTSYNC:value}"]
+      - from: pboard
+        to: driver
+        signals: ["STROBE, sensor GPIO{SENSOR_IO_STROBE:value}"]
+      - from: board
+        to: driver
+        signals: ["{PIN_LED_EN} → LED enable"]
+      - from: driver
+        to: leds
+        signals: ["LED current"]
+      - from: sync
+        to: board
+        signals: ["SYNC_IN → {PIN_SYNC_IN}"]
+      - from: board
+        to: sync
+        signals: ["{PIN_SYNC_OUT} → SYNC_OUT (sync master only)"]
+      - from: board
+        to: pc
+        signals: ["USB 2.0 high speed"]
