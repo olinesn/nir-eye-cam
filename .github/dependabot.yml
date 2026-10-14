@@ -1,7 +1,13 @@
-# Dependabot opens a pull request when something this repo pins has a newer
-# release: monthly, one grouped pull request per ecosystem, and only for
-# releases at least two weeks old (cooldown), the same caution the actions
-# were first pinned with.
+# Dependabot opens a pull request when a GitHub Action this repo pins has a
+# newer release: monthly, grouped into one pull request, and only for releases
+# at least two weeks old (cooldown), the same caution the actions were first
+# pinned with.
+#
+# Python dependencies are deliberately not tracked. The host package supports
+# Python 3.9+, and current numpy and pytest need 3.10+, so Dependabot cannot
+# move host/uv.lock forward (it tried, and every run failed). CI does not use
+# the lock: it installs the newest versions each Python accepts, so new
+# releases get tested whenever host/ changes.
 #
 # Not covered: Dependabot cannot read these, so update them by hand:
 # - in .github/workflows/firmware.yml, the ESP-IDF container image (pinned by
@@ -21,15 +27,4 @@ updates:
       default-days: 14
     groups:
       github-actions:
-        patterns: ["*"]
-
-  # The host package's lock file (host/uv.lock).
-  - package-ecosystem: uv
-    directory: /host
-    schedule:
-      interval: monthly
-    cooldown:
-      default-days: 14
-    groups:
-      python:
         patterns: ["*"]
