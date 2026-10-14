@@ -14,6 +14,7 @@ authors:
     affiliation: "Princeton University"
     orcid: "https://orcid.org/0000-0002-7094-3800"
 version: "0.1.0"
+date-released: "2026-10-14"
 repository-code: "https://github.com/olinesn/nir-eye-cam"
 # The project's license is not an SPDX identifier, which CFF's `license`
 # field requires, so it is linked instead.

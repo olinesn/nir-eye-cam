@@ -4,20 +4,24 @@ Notable changes to this project. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-Nothing has been released yet. The code currently reports version **0.1.0**
-in five places:
-- `FW_VERSION` in `firmware/src/main.c` (`0.1.0`) and
-  `firmware-p4/main/main.c` (`0.1.0-p4`);
+The version is set in five places:
+- `FW_VERSION` in `firmware/src/main.c` (`X.Y.Z`) and
+  `firmware-p4/main/main.c` (`X.Y.Z-p4`);
 - the host package, in `host/pyproject.toml` and `host/nireyecam/__init__.py`;
 - `version` in `CITATION.cff`.
 
 To release:
-1. Rename **Unreleased** below to the version and date.
-2. Update those five version strings to match, and add the date as
-   `date-released` in `CITATION.cff`.
+1. Rename **Unreleased** below to the version and date, and start a new,
+   empty **Unreleased** section above it.
+2. Update those five version strings to match, and set `date-released` in
+   `CITATION.cff` to the same date.
 3. Tag the commit `vX.Y.Z`.
+4. Publish a GitHub release from the tag. Zenodo archives published
+   releases, not tags.
 
 ## [Unreleased]
+
+## [0.1.0] - 2026-10-14
 
 ### Added
 
@@ -71,4 +75,5 @@ To release:
   `self._stop`, which shadows a method `Thread.join()` calls on those
   versions. It was pushed to `main` before CI tested older Pythons.
 
-[Unreleased]: https://github.com/olinesn/nir-eye-cam/commits/main
+[Unreleased]: https://github.com/olinesn/nir-eye-cam/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/olinesn/nir-eye-cam/releases/tag/v0.1.0

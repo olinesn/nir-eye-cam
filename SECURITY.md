@@ -7,9 +7,9 @@ described below will not exist. -->
 
 ## Supported versions
 
-Nothing has been released yet (see [CHANGELOG.md](CHANGELOG.md)). Fixes go to
-`main`, so please check that a problem still occurs on the latest `main`
-before reporting it.
+Releases are listed in [CHANGELOG.md](CHANGELOG.md). Fixes go to `main` and
+into the next release, so please check that a problem still occurs on the
+latest `main` before reporting it.
 
 ## Reporting a vulnerability
 
