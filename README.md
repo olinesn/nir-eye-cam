@@ -20,7 +20,7 @@ common/     nec_protocol.h, the packet format both firmwares share
 host/       Python: nireyecam-record, nireyecam-align, nireyecam-list,
             plus a simulated camera for testing without hardware
 docs/       hardware.md (parts, wiring, optics, sync, safety, depth),
-            protocol.md
+            protocol.md, miniscope.md (dual-colour calcium imaging)
 ```
 
 Read [docs/hardware.md](docs/hardware.md) first. In particular, the cameras
