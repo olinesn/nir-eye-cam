@@ -10,17 +10,21 @@ name: Firmware
 on:
   push:
     branches: [main]
+    # A commit that changes only Markdown (READMEs) does not rebuild; one that
+    # also changes code does, since the code files still match.
     paths:
       - "firmware/**"
       - "firmware-p4/**"
       - "common/**"
       - ".github/workflows/firmware.yml"
+      - "!**/*.md"
   pull_request:
     paths:
       - "firmware/**"
       - "firmware-p4/**"
       - "common/**"
       - ".github/workflows/firmware.yml"
+      - "!**/*.md"
   workflow_dispatch:
 
 permissions:
