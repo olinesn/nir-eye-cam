@@ -4,3 +4,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 runs/
+firmware-p4/build/
+firmware-p4/managed_components/
+firmware-p4/sdkconfig
+firmware-p4/sdkconfig.old

@@ -4,13 +4,13 @@
 
 #include "driver/isp.h"
 #include "esp_attr.h"
-#include "esp_cache.h"
 #include "esp_cam_ctlr.h"
 #include "esp_cam_ctlr_csi.h"
 #include "esp_check.h"
 #include "esp_heap_caps.h"
 #include "esp_ldo_regulator.h"
 #include "esp_log.h"
+#include "sdkconfig.h"
 #include "esp_timer.h"
 #include "freertos/queue.h"
 
@@ -120,8 +120,9 @@ esp_err_t capture_init(uint16_t w, uint16_t h, int lanes, int lane_mbps)
         ESP_RETURN_ON_ERROR(esp_ldo_acquire_channel(&ldo, &s_ldo), TAG, "MIPI PHY LDO");
     }
 
-    size_t align = 0;
-    ESP_RETURN_ON_ERROR(esp_cache_get_alignment(MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA, &align), TAG, "alignment");
+    // Slots start and end on cache lines: the driver syncs the cache over
+    // each buffer's whole length before and after DMA.
+    size_t align = CONFIG_CACHE_L2_CACHE_LINE_SIZE;
     if (align < 64) align = 64;
     s_slot_bytes = (s_frame_bytes + align - 1) / align * align;
     s_nslots = POOL_BYTES / s_slot_bytes;
@@ -132,7 +133,8 @@ esp_err_t capture_init(uint16_t w, uint16_t h, int lanes, int lane_mbps)
     s_filled = xQueueCreate(s_nslots, sizeof(filled_t));
     ESP_RETURN_ON_FALSE(s_free && s_filled, ESP_ERR_NO_MEM, TAG, "queues");
     for (uint32_t i = 0; i < s_nslots; i++) {
-        s_slot_buf[i] = heap_caps_aligned_calloc(align, 1, s_slot_bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA);
+        s_slot_buf[i] = heap_caps_aligned_calloc(align, 1, s_slot_bytes,
+                                                 MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA | MALLOC_CAP_CACHE_ALIGNED);
         ESP_RETURN_ON_FALSE(s_slot_buf[i], ESP_ERR_NO_MEM, TAG, "slot %lu", (unsigned long)i);
         int slot = (int)i;
         xQueueSend(s_free, &slot, 0);

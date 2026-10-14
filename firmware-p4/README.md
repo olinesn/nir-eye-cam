@@ -6,8 +6,9 @@ speaks the same packet protocol as the RP2040 build
 ([../common/nec_protocol.h](../common/nec_protocol.h)), so `nireyecam-record`
 and `nireyecam-align` work with it unchanged.
 
-**Status: written against the ESP-IDF v6.1 and esp_tinyusb 2.4 sources, but
-not yet compiled or run.**
+**Status: compiles with ESP-IDF v6.1 and esp_tinyusb 2.4 with no warnings
+(ESP-IDF builds with `-Wall -Werror`); not yet run on hardware.**
+`dependencies.lock` pins the component versions that built.
 
 ## Layout
 

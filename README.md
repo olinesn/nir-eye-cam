@@ -9,7 +9,7 @@ record to one timeline through a shared sync wire.
 firmware/   RP2040 firmware (Pico SDK, C): continuous capture, per-frame
             timestamps, sync in/out, IR LED PWM, USB serial streaming
 firmware-p4/  ESP32-P4 firmware (ESP-IDF, C) for the VD55G1 global-shutter
-            build: MIPI CSI-2 capture, same protocol (skeleton, not yet built)
+            build: MIPI CSI-2 capture, same protocol (compiles; not yet run)
 common/     nec_protocol.h, the packet format both firmwares share
 host/       Python: nireyecam-record, nireyecam-align, nireyecam-list,
             plus a simulated camera for testing without hardware

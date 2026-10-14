@@ -12,7 +12,7 @@ static volatile bool s_connected;
 
 static void on_rx(int itf, cdcacm_event_t* event)
 {
-    uint8_t buf[CONFIG_TINYUSB_CDC_RX_BUFSIZE];
+    uint8_t buf[256];  // small: this runs on the TinyUSB task stack
     size_t n = 0;
     while (tinyusb_cdcacm_read(itf, buf, sizeof(buf), &n) == ESP_OK && n > 0) {
         if (s_on_rx) s_on_rx(buf, n);
