@@ -1,0 +1,49 @@
+# Runs every pre-commit hook (.pre-commit-config.yaml) on the whole repo, so
+# the checks hold even for commits made without the hooks installed. No path
+# filter: the hooks cover every file, Markdown included. Hook environments are
+# cached on the config's hash, so a run takes about a minute.
+
+name: pre-commit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pre-commit-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PRE_COMMIT_VERSION: "4.6.2"
+
+jobs:
+  pre-commit:
+    name: pre-commit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Cache hook environments
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ env.PRE_COMMIT_VERSION }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Install pre-commit
+        run: python -m pip install "pre-commit==$PRE_COMMIT_VERSION"
+
+      - name: Run all hooks
+        # --show-diff-on-failure: if a hook would fix a file (whitespace, line
+        # endings), print the fix so it can be applied locally.
+        run: pre-commit run --all-files --show-diff-on-failure --color=always
