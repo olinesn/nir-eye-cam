@@ -72,8 +72,70 @@ Use `-DNEC_BOARD=pico` (and `build-pico`) for a Raspberry Pi Pico. The SDK
 downloads and builds `picotool` (its UF2 tool) on first use;
 `PICOTOOL_FETCH_FROM_GIT_PATH` keeps one shared copy.
 
-Flash: hold BOOT (the "B" button on the XIAO) while plugging in USB, then copy
-the `.uf2` onto the `RPI-RP2` drive that appears.
+## Flash the firmware
+
+Use the files you built, or download them from the latest successful CI run
+on `main` (GitHub keeps them for 90 days):
+
+```bash
+run=$(gh run list -R olinesn/nir-eye-cam -w firmware.yml -b main -s success -L 1 --json databaseId -q '.[0].databaseId')
+gh run download "$run" -R olinesn/nir-eye-cam -n nir-eye-cam-xiao -D fw-xiao
+```
+
+For the other boards use `-n nir-eye-cam-pico -D fw-pico` or
+`-n nir-eye-cam-esp32p4 -D fw-esp32p4`.
+
+### RP2040 (XIAO or Pico): drag and drop
+
+1. Put the board in its USB bootloader:
+   - **XIAO RP2040:** hold **B** (BOOT) while plugging in USB. If it is
+     already plugged in, hold **B**, press and release **R** (RESET), then
+     release **B**.
+   - **Pico:** hold **BOOTSEL** while plugging in USB (it has no reset button).
+2. A drive named `RPI-RP2` appears. Copy the `.uf2` onto it:
+   ```bash
+   cp -X fw-xiao/nir_eye_cam_xiao.uf2 /Volumes/RPI-RP2/
+   ```
+   `-X` leaves out macOS extended attributes, which avoids an error some
+   macOS versions report even when the copy succeeded. A Finder drag works too.
+3. The drive disappears and the board restarts as the camera:
+   `nireyecam-list` should show a port named "NIR Eye Cam".
+
+Reflashing always goes through step 1: this firmware has no "reboot to
+bootloader" USB command, so the button is the way in. From the command line
+instead, `brew install picotool`, then with the board in bootloader mode
+`picotool load -x fw-xiao/nir_eye_cam_xiao.uf2`. (The picotool the Pico SDK
+builds for itself has no USB support and cannot flash.)
+
+### ESP32-P4: esptool
+
+ESP32-P4 boards usually have two USB connections:
+- a **UART / USB-serial-JTAG** port, used for flashing and logs;
+- the **USB 2.0 high-speed (OTG)** port this firmware streams frames on.
+
+Flash through the first one. To find its name, compare `ls /dev/cu.*`
+before and after plugging it in.
+
+From your own build (ESP-IDF loaded):
+
+```bash
+cd firmware-p4 && . ~/esp/esp-idf/export.sh
+idf.py -p /dev/cu.usbserial-XXXX flash monitor   # Ctrl-] leaves the monitor
+```
+
+From a CI download (no ESP-IDF needed: `uvx` runs esptool without
+installing it, or use `pip install esptool`):
+
+```bash
+cd fw-esp32p4
+uvx esptool --chip esp32p4 -p /dev/cu.usbserial-XXXX -b 460800 --before default-reset --after hard-reset write-flash @flash_args
+```
+
+`flash_args` lists the bootloader, partition table and app with their
+addresses. If the board does not enter download mode by itself, hold
+**BOOT**, press **RESET**, release **BOOT**, and run the command again. Then
+plug the high-speed port into the computer: `nireyecam-list` should show
+"NIR Eye Cam".
 
 ## Record
 

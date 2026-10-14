@@ -32,6 +32,10 @@ idf.py build
 idf.py -p PORT flash monitor
 ```
 
+`PORT` is the board's UART / USB-serial-JTAG port, not the high-speed USB port
+the camera streams on. Flashing a CI build without ESP-IDF is covered in the
+main README's "Flash the firmware" section.
+
 `esp_tinyusb` is fetched automatically (see `main/idf_component.yml`). The
 camera shows up as a USB serial device named "NIR Eye Cam" on the
 high-speed port; logs go to the board's UART / USB-serial-JTAG console.
