@@ -9,6 +9,9 @@ body:
         (`--cam name=sim`) is much easier to fix than one that needs hardware,
         so please say whether you tried it.
 
+        **Security problem?** Don't report it here: see SECURITY.md for how to
+        report it privately.
+
   - type: dropdown
     id: area
     attributes:
