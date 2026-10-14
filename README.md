@@ -91,3 +91,19 @@ per camera with:
 ```bash
 cd host && pip install -e '.[test]' && pytest
 ```
+
+## License
+
+MIT; see [LICENSE](LICENSE). Third-party code included here keeps its own
+license:
+
+- `firmware/src/camera.c` adapts the sensor setup and PIO program from Arm's
+  [hm01b0-library-for-pico](https://github.com/ArmDeveloperEcosystem/hm01b0-library-for-pico)
+  (MIT, Copyright 2023 Arm Limited); its notice is in
+  [firmware/LICENSE-hm01b0-library-for-pico](firmware/LICENSE-hm01b0-library-for-pico).
+- `firmware/pico_sdk_import.cmake` is copied unchanged from the
+  [Raspberry Pi Pico SDK](https://github.com/raspberrypi/pico-sdk) (BSD-3-Clause).
+
+The VD55G1 driver in `firmware-p4/` was written from the sensor's register
+map; the GPL Linux driver was consulted for register values, but no code was
+copied from it.
