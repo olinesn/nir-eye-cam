@@ -4,6 +4,7 @@
 #include "driver/ledc.h"
 #include "esp_attr.h"
 #include "esp_check.h"
+#include "esp_clk_tree.h"
 #include "esp_timer.h"
 
 #include "board.h"
@@ -26,7 +27,7 @@ static volatile bool s_gen_on;
 static bool s_gen_high;
 static uint32_t s_rng;
 
-static uint32_t s_trig_hz;
+static uint32_t s_trig_hz, s_blink_hz;
 static bool s_led;
 
 static void IRAM_ATTR fsync_isr(void* arg)
@@ -99,35 +100,67 @@ void syncgen_set(bool on)
 
 bool syncgen_on(void) { return s_gen_on; }
 
-esp_err_t trig_set(uint32_t hz)
+// TRIG and BLINK are LEDC PWM outputs, each on its own timer. Both run off the
+// 40 MHz crystal. LEDC_AUTO_CLK at a fixed 10-bit resolution picks the RC
+// oscillator below ~38 Hz (an inaccurate frame rate, and no output at all below
+// ~17 Hz), and the timers share one clock mux, so the second output was refused
+// whenever the two frequencies picked different sources. The duty resolution is
+// chosen per frequency instead: the fewest bits (>= 8) whose divider fits, which
+// keeps the divider large and so the frequency close to exact.
+static esp_err_t pwm_set(ledc_timer_t timer, ledc_channel_t channel, int gpio, uint32_t hz,
+                         uint32_t permille)
 {
-    if (hz == 0) {
-        ledc_stop(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
-        s_trig_hz = 0;
-        return ESP_OK;
+    if (hz == 0) return ledc_stop(LEDC_LOW_SPEED_MODE, channel, 0);
+    uint32_t src = 0;
+    ESP_RETURN_ON_ERROR(esp_clk_tree_src_get_freq_hz(SOC_MOD_CLK_XTAL, ESP_CLK_TREE_SRC_FREQ_PRECISION_CACHED, &src),
+                        TAG, "crystal frequency");
+    int bits = 0;
+    for (int b = 8; b < LEDC_TIMER_BIT_MAX; b++) {
+        // The divider in 1/256 steps (10.8 fixed point), rounded as the LEDC driver does.
+        uint64_t div = (((uint64_t)src << 8) + ((uint64_t)hz << b) / 2) / ((uint64_t)hz << b);
+        if (div <= 0x3FFFF) {
+            if (div > 0xFF) bits = b;
+            break;
+        }
     }
-    ledc_timer_config_t timer = {
+    ESP_RETURN_ON_FALSE(bits, ESP_ERR_INVALID_ARG, TAG, "no divider for %lu Hz", (unsigned long)hz);
+    ledc_timer_config_t tc = {
         .speed_mode = LEDC_LOW_SPEED_MODE,
-        .duty_resolution = LEDC_TIMER_10_BIT,
-        .timer_num = LEDC_TIMER_0,
+        .duty_resolution = (ledc_timer_bit_t)bits,
+        .timer_num = timer,
         .freq_hz = hz,
-        .clk_cfg = LEDC_AUTO_CLK,
+        .clk_cfg = LEDC_USE_XTAL_CLK,
     };
-    ESP_RETURN_ON_ERROR(ledc_timer_config(&timer), TAG, "trigger timer at %lu Hz", (unsigned long)hz);
+    ESP_RETURN_ON_ERROR(ledc_timer_config(&tc), TAG, "timer %d at %lu Hz", (int)timer, (unsigned long)hz);
     ledc_channel_config_t ch = {
-        .gpio_num = PIN_TRIG_OUT,
+        .gpio_num = gpio,
         .speed_mode = LEDC_LOW_SPEED_MODE,
-        .channel = LEDC_CHANNEL_0,
-        .timer_sel = LEDC_TIMER_0,
-        .duty = 51,  // ~5% high: a short pulse at each frame start
+        .channel = channel,
+        .timer_sel = timer,
+        .duty = (uint32_t)(((1ull << bits) * permille + 500) / 1000),
         .hpoint = 0,
     };
-    ESP_RETURN_ON_ERROR(ledc_channel_config(&ch), TAG, "trigger channel");
-    s_trig_hz = hz;
-    return ESP_OK;
+    return ledc_channel_config(&ch);
+}
+
+esp_err_t trig_set(uint32_t hz)
+{
+    // ~5% high: a short pulse at each frame start.
+    esp_err_t err = pwm_set(LEDC_TIMER_0, LEDC_CHANNEL_0, PIN_TRIG_OUT, hz, 50);
+    if (err == ESP_OK) s_trig_hz = hz;
+    return err;
 }
 
 uint32_t trig_hz(void) { return s_trig_hz; }
+
+esp_err_t blink_set(uint32_t hz)
+{
+    esp_err_t err = pwm_set(LEDC_TIMER_1, LEDC_CHANNEL_1, PIN_BLINK, hz, 500);
+    if (err == ESP_OK) s_blink_hz = hz;
+    return err;
+}
+
+uint32_t blink_hz(void) { return s_blink_hz; }
 
 void led_enable(bool on)
 {

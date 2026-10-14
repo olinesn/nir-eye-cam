@@ -74,3 +74,4 @@
 #define PIN_SYNC_OUT         22  // J1-12  out: random pulse train (sync master only)
 #define PIN_TRIG_OUT         23  // J1-7   out: frame trigger to every sensor's GPIO0
 #define PIN_LED_EN           32  // J1-26  out: gates the STROBE -> LED path (IR master enable)
+#define PIN_BLINK            33  // J1-29  out: visible test LED for the two-camera sync check (BLINK)

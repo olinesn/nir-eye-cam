@@ -161,6 +161,11 @@ Rules:
 - **No resistors on the TXB0104's channels.** The TXB family is made for
   push-pull signals; strong pull-ups or pull-downs on its lines upset its
   automatic direction sensing.
+- **Two cameras:** each camera has its own TXB0104, on its own P-Board's
+  1.8 V. One board's TRIG out (GPIO23) goes to the B2 pin of both shifters,
+  and a ground wire joins the boards. The other board's GPIO23 stays
+  unconnected. The sync check's test LED hangs off the driving board's GPIO33
+  through 330 Ω (README, "Check that two cameras expose together").
 - **VERIFY when the P-Board arrives:** which sensor GPIOs and which 1.8 V
   point it brings out. ST's Raspberry Pi overlay drives the strobe from
   sensor GPIO2; if only GPIO2 is available, swap the STROBE and FSYNC_OUT

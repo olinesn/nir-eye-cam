@@ -1,10 +1,17 @@
 """A software stand-in for the firmware, so the host side runs without hardware.
 
-It speaks the same protocol and command set as firmware/src/main.c. Each
-simulated camera has its own clock (offset + ppm drift, like a real crystal),
-and all cameras in one ``SimWorld`` share a sync wire, so recording and
-alignment can be tested end to end. ``truth`` records the true start time of
-every frame and pulse, which is what the tests check alignment against.
+It speaks the same protocol as the firmware, with the RP2040 command set plus
+the ESP32-P4's TRIG, EXTSYNC and BLINK. Each simulated camera has its own
+clock (offset + ppm drift, like a real crystal), and all cameras in one
+``SimWorld`` share a sync wire, a frame-trigger wire and a blinking test LED
+that every camera sees, so recording, alignment and the two-camera sync check
+can be tested end to end. ``truth`` records the true start time of every frame
+and pulse, which is what the tests check against.
+
+A frame's exposure is the window [start, start + exposure lines x line time],
+for the whole frame at once (a global shutter, like the VD55G1). With EXTSYNC
+on, a frame starts ``trigger_latency_s`` after a trigger edge, and an edge that
+arrives while the previous frame is still being read out is missed.
 """
 
 from __future__ import annotations
@@ -34,6 +41,11 @@ class SimWorld:
         self._pulses: list[float] = []
         self._next: float | None = None
         self.driver: object | None = None  # the camera whose SYNCGEN is on
+        # TRIG and BLINK: (first edge, period) in true time, from the owner's clock.
+        self.trigger_owner: object | None = None
+        self._trigger: tuple[float, float] | None = None
+        self.blink_owner: object | None = None
+        self._blink: tuple[float, float] | None = None
 
     def now(self) -> float:
         return time.monotonic() - self.t0
@@ -46,6 +58,51 @@ class SimWorld:
             elif not on and self.driver is who:
                 self.driver = None
                 self._next = None
+
+    def set_trigger(self, who: object, hz: float, ppm: float = 0.0) -> None:
+        """The frame-trigger wire. One camera drives it, at ``hz`` on its own clock."""
+        with self._lock:
+            if hz > 0 and self.trigger_owner in (None, who):
+                self.trigger_owner = who
+                self._trigger = (self.now() + 0.001, 1.0 / (hz * (1 + ppm * 1e-6)))
+            elif hz <= 0 and self.trigger_owner is who:
+                self.trigger_owner, self._trigger = None, None
+
+    def trigger_edges_between(self, a: float, b: float) -> list[float]:
+        """Trigger rising edges in (a, b]."""
+        with self._lock:
+            trig = self._trigger
+        if trig is None:
+            return []
+        t0, period = trig
+        first = max(0, math.floor((a - t0) / period) + 1)
+        last = math.floor((b - t0) / period)
+        return [t0 + n * period for n in range(first, last + 1)]
+
+    def set_blink(self, who: object, hz: float, ppm: float = 0.0) -> None:
+        """The test LED: a 50% square wave at ``hz`` on its driver's clock."""
+        with self._lock:
+            if hz > 0 and self.blink_owner in (None, who):
+                self.blink_owner = who
+                self._blink = (self.now() + 0.0005, 1.0 / (hz * (1 + ppm * 1e-6)))
+            elif hz <= 0 and self.blink_owner is who:
+                self.blink_owner, self._blink = None, None
+
+    def blink_on_time(self, a: float, b: float) -> float:
+        """Seconds the test LED is lit within [a, b]."""
+        with self._lock:
+            blink = self._blink
+        if blink is None or b <= a:
+            return 0.0
+        t0, period = blink
+
+        def lit_until(t: float) -> float:
+            if t <= t0:
+                return 0.0
+            n, r = divmod(t - t0, period)
+            return n * period / 2 + min(r, period / 2)
+
+        return lit_until(b) - lit_until(a)
 
     def pulses_between(self, a: float, b: float) -> list[float]:
         """Rising edges in (a, b], generating the random train lazily."""
@@ -66,8 +123,10 @@ class _Eye:
         yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
         self.xx, self.yy = xx, yy
         self.s = w / 160.0
+        # The test LED, in a corner clear of the eye.
+        self.led = (xx - 0.08 * w) ** 2 + (yy - 0.1 * h) ** 2 < (3 * self.s) ** 2
 
-    def render(self, t: float, brightness: float) -> np.ndarray:
+    def render(self, t: float, brightness: float, led: float = 0.0) -> np.ndarray:
         s, xx, yy = self.s, self.xx, self.yy
         cx = self.w / 2 + 3 * s * math.sin(0.7 * t)
         cy = self.h / 2 + 2 * s * math.cos(0.5 * t)
@@ -78,7 +137,9 @@ class _Eye:
         pupil_r = s * (10 + 6 * math.sin(2 * math.pi * 0.25 * t))
         img[r2 < pupil_r**2] = 20
         img[(xx - cx - 6 * s) ** 2 + (yy - cy + 5 * s) ** 2 < (2 * s) ** 2] = 250
-        img = img * brightness + self.rng.normal(0, 3, img.shape)
+        img = img * brightness
+        img[self.led] += led
+        img += self.rng.normal(0, 3, img.shape)
         return np.clip(img, 0, 255).astype(np.uint8)
 
 
@@ -91,6 +152,7 @@ class SimDevice:
         self.uid = f"SIM{seed:013d}"
         self.clock_ppm = rng.uniform(-50, 50)
         self.clock_offset_s = rng.uniform(1, 100)  # seconds since "boot"
+        self.trigger_latency_s = rng.uniform(5e-6, 60e-6)  # trigger edge -> exposure start
         self.truth_frames: dict[int, float] = {}   # seq -> true frame start
         self.truth_sync: dict[int, float] = {}     # sync seq -> true edge time
 
@@ -103,7 +165,14 @@ class SimDevice:
         self.streaming = False
         self.vsync = 0
         self.sync_edges = 0
+        self.extsync = False
+        self.trig_hz = 0
+        self.blink_hz = 0
+        self.missed_triggers = 0
         self._next_frame: float | None = None
+        self._pending: list[float] = []  # EXTSYNC frame starts not yet read out
+        self._last_start: float | None = None
+        self._last_trigger_check = world.now()
         self._last_sync_check = world.now()
         self._np_rng = np.random.default_rng(seed)
         self._eye = _Eye(self.width, self.height, self._np_rng)
@@ -122,6 +191,9 @@ class SimDevice:
         default = RESOLUTIONS[(self.width, self.height)]
         return (1.0 / BASE_FPS) * self.frame_length / default
 
+    def exposure_s(self) -> float:
+        return self.exposure * self.frame_period() / self.frame_length
+
     # -- host side
     def write(self, data: bytes) -> None:
         with self._lock:
@@ -137,6 +209,8 @@ class SimDevice:
     def close(self) -> None:
         self._closed = True
         self.world.set_syncgen(self, False)
+        self.world.set_trigger(self, 0)
+        self.world.set_blink(self, 0)
         self._thread.join(timeout=1.0)
 
     # -- device side
@@ -167,26 +241,45 @@ class SimDevice:
                 self._emit(protocol.pack(protocol.SYNC, seq=self.sync_edges, t_us=self.dev_us(p)))
             self._last_sync_check = now
 
-            while self.streaming and self._next_frame is not None and self._next_frame + self.frame_period() <= now:
+            edges = self.world.trigger_edges_between(self._last_trigger_check, now)
+            self._last_trigger_check = now
+            if self.streaming and self.extsync:
+                for e in edges:
+                    start = e + self.trigger_latency_s
+                    if self._last_start is not None and start < self._last_start + self.frame_period():
+                        self.missed_triggers += 1  # still reading out the previous frame
+                        continue
+                    self._pending.append(start)
+                    self._last_start = start
+                while self._pending and self._pending[0] + self.frame_period() <= now:
+                    self._emit_frame(self._pending.pop(0))
+
+            while (self.streaming and not self.extsync and self._next_frame is not None
+                   and self._next_frame + self.frame_period() <= now):
                 start = self._next_frame
-                self.vsync += 1
-                self.truth_frames[self.vsync] = start
-                img = self._eye.render(start, self._brightness())
-                self._emit(
-                    protocol.pack(
-                        protocol.FRAME,
-                        img.tobytes(),
-                        flags=protocol.FLAG_AE if self.ae else 0,
-                        seq=self.vsync,
-                        t_us=self.dev_us(start),
-                        width=self.width,
-                        height=self.height,
-                        exposure=self.exposure,
-                        again=self.again,
-                    )
-                )
-                self._next_frame = start + self.frame_period()
+                self._emit_frame(start)
+                self._next_frame = start + self.frame_period() / (1 + self.clock_ppm * 1e-6)
             time.sleep(0.002)
+
+    def _emit_frame(self, start: float) -> None:
+        self.vsync += 1
+        self.truth_frames[self.vsync] = start
+        # The test LED adds light in proportion to how long it was lit during the exposure.
+        lit = self.world.blink_on_time(start, start + self.exposure_s())
+        img = self._eye.render(start, self._brightness(), led=1e5 * lit * 2**self.again)
+        self._emit(
+            protocol.pack(
+                protocol.FRAME,
+                img.tobytes(),
+                flags=protocol.FLAG_AE if self.ae else 0,
+                seq=self.vsync,
+                t_us=self.dev_us(start),
+                width=self.width,
+                height=self.height,
+                exposure=self.exposure,
+                again=self.again,
+            )
+        )
 
     def _brightness(self) -> float:
         led = 0.05 + 0.95 * self.led / 1000  # no IR, almost no image
@@ -211,7 +304,10 @@ class SimDevice:
                 "fw": "sim", "board": "sim", "uid": self.uid, "cam_ok": 1, "cam_error": "",
                 "width": self.width, "height": self.height, "exposure": self.exposure,
                 "frame_length": self.frame_length, "again": self.again, "ae": int(self.ae),
+                "frame_period_us": round(self.frame_period() * 1e6),
+                "line_time_ns": round(self.frame_period() / self.frame_length * 1e9),
                 "led": self.led, "syncgen": int(self.world.driver is self),
+                "trig_hz": self.trig_hz, "extsync": int(self.extsync), "blink_hz": self.blink_hz,
                 "streaming": int(self.streaming), "slots": 10,
                 "sync_edges": self.sync_edges, "sync_overflows": 0,
             }
@@ -222,9 +318,12 @@ class SimDevice:
             if not self.streaming:
                 self.streaming, self.vsync = True, 0
                 self._next_frame = self.world.now() + self._rng_phase()
+                self._pending, self._last_start = [], None
+                self._last_trigger_check = self.world.now()
             return self._reply("OK START")
         if cmd == "STOP":
             self.streaming = False
+            self._pending = []
             return self._reply("OK STOP")
         if cmd == "RES":
             if self.streaming:
@@ -276,6 +375,28 @@ class SimDevice:
                 return self._reply("ERR SYNCGEN expected 0 or 1")
             self.world.set_syncgen(self, bool(v))
             return self._reply(f"OK SYNCGEN {int(self.world.driver is self)}")
+        if cmd == "TRIG":
+            v = num(0, 1000)
+            if v is None:
+                return self._reply("ERR TRIG expected 0-1000 Hz")
+            self.trig_hz = v
+            self.world.set_trigger(self, v, self.clock_ppm)
+            return self._reply(f"OK TRIG {v}")
+        if cmd == "EXTSYNC":
+            v = num(0, 1)
+            if v is None:
+                return self._reply("ERR EXTSYNC expected 0 or 1")
+            if self.streaming:
+                return self._reply("ERR EXTSYNC stop first")
+            self.extsync = bool(v)
+            return self._reply(f"OK EXTSYNC {v}")
+        if cmd == "BLINK":
+            v = num(0, 10000)
+            if v is None:
+                return self._reply("ERR BLINK expected 0-10000 Hz")
+            self.blink_hz = v
+            self.world.set_blink(self, v, self.clock_ppm)
+            return self._reply(f"OK BLINK {v}")
         return self._reply(f"ERR {cmd} unknown command")
 
     def _rng_phase(self) -> float:

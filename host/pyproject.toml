@@ -21,6 +21,7 @@ nireyecam-align = "nireyecam.align:main"
 nireyecam-list = "nireyecam.record:list_main"
 nireyecam-bench = "nireyecam.bench:main"
 nireyecam-sensortest = "nireyecam.sensortest:main"
+nireyecam-synctest = "nireyecam.synctest:main"
 
 [tool.setuptools]
 packages = ["nireyecam"]

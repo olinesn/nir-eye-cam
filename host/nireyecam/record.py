@@ -3,6 +3,10 @@
     nireyecam-record --out runs/mouse01 --cam left=/dev/cu.usbmodem1101 \\
         --cam right=/dev/cu.usbmodem1201 --sync-master left --led 300 --duration 600
 
+With --trigger HZ (ESP32-P4 only), every camera starts each frame on the
+master's TRIG_OUT instead of its own timer, so exposures are simultaneous;
+--blink HZ adds the blinking test LED that nireyecam-synctest measures that with.
+
 Per camera, in <out>/<name>/:
     video.mkv     lossless FFV1, 8-bit gray (or frames.u8 raw with --format raw)
     frames.csv    one row per video frame: device timestamp, sensor frame counter
@@ -148,6 +152,8 @@ def configure(cam: Camera, args, master: bool) -> dict:
     info = cam.info()
     if not info.get("cam_ok"):
         raise CameraError(f"{cam.name}: sensor not ready: {info.get('cam_error')}")
+    if args.trigger and "extsync" not in info:
+        raise CameraError(f"{cam.name}: --trigger needs the ESP32-P4 firmware (EXTSYNC)")
     if args.res:
         cam.command(f"RES {args.res}")
     if args.fll is not None:
@@ -158,11 +164,34 @@ def configure(cam: Camera, args, master: bool) -> dict:
     cam.command(f"AE {int(args.ae)}")
     cam.command(f"LED {args.led}")
     cam.command(f"SYNCGEN {int(master)}")
+    if args.trigger:
+        cam.command("EXTSYNC 1")
+        info = cam.info()
+        own = float(info.get("frame_period_us") or 0)
+        if own >= 1e6 / args.trigger:
+            raise CameraError(f"{cam.name}: its frame period ({own:.0f} us) is not shorter than the "
+                              f"trigger period: lower --fll or --trigger")
     return cam.info()
 
 
-def frame_timing(folder: Path, frame_length: int) -> dict:
-    """Measured frame period, and the line time it implies (exposure is set in lines)."""
+def start_trigger(cam: Camera, args) -> None:
+    """The driving camera's outputs: the test LED first, then the frame trigger."""
+    info = cam.info()
+    if args.blink:
+        if "blink_hz" not in info:
+            raise CameraError(f"{cam.name}: --blink needs the ESP32-P4 firmware (BLINK)")
+        cam.command(f"BLINK {args.blink}")
+    if args.trigger:
+        cam.command(f"TRIG {args.trigger}")
+
+
+def frame_timing(folder: Path, frame_length: int, line_time_ns: float | None = None) -> dict:
+    """Measured frame period, and the exposure in ms (it is set in lines).
+
+    The line time is the device's own figure when it reports one (ESP32-P4);
+    otherwise it is the measured period over the frame length, which holds
+    only while the sensor free-runs: a trigger sets the period, not the lines.
+    """
     with open(folder / "frames.csv", newline="") as f:
         rows = list(csv.DictReader(f))
     if len(rows) < 2:
@@ -172,7 +201,7 @@ def frame_timing(folder: Path, frame_length: int) -> dict:
     steps = np.diff(seq)
     periods = np.diff(t)[steps > 0] / steps[steps > 0]
     period_us = float(np.median(periods))
-    line_us = period_us / frame_length
+    line_us = line_time_ns / 1000 if line_time_ns else period_us / frame_length
     exposure = int(rows[-1]["exposure_lines"])
     return {
         "frame_period_us": period_us,
@@ -201,6 +230,7 @@ def run(args) -> int:
     if master and master not in names:
         print(f"error: --sync-master {master!r} is not one of {names}", file=sys.stderr)
         return 1
+    driver = (args.sync_master or names[0]) if args.trigger or args.blink else None
 
     fmt = args.format
     if fmt == "ffv1" and not shutil.which("ffmpeg"):
@@ -225,8 +255,15 @@ def run(args) -> int:
             infos[cam.name] = configure(cam, args, master=cam.name == master)
             print(f"{cam.name}: {infos[cam.name]['board']} {infos[cam.name]['uid']} "
                   f"{infos[cam.name]['width']}x{infos[cam.name]['height']} exp={infos[cam.name]['exposure']} lines")
+        if driver:
+            start_trigger(next(c for c in cams if c.name == driver), args)
+            if args.trigger:
+                print(f"{driver}: TRIG {args.trigger} Hz, every camera on EXTSYNC")
+            if args.blink:
+                print(f"{driver}: BLINK {args.blink} Hz")
+        nominal_fps = args.nominal_fps or args.trigger or 30.0
         for cam in cams:
-            rec = CameraRecorder(cam, out / cam.name, fmt, args.nominal_fps)
+            rec = CameraRecorder(cam, out / cam.name, fmt, nominal_fps)
             rec.start()
             recs.append(rec)
 
@@ -239,12 +276,19 @@ def run(args) -> int:
         print(f"error: {e}", file=sys.stderr)
         failed = True
     finally:
+        # Every camera stops before the trigger goes away (firmware-p4/README.md, bring-up step 5).
         for cam in cams:
-            for cmd in ("STOP", "LED 0", "SYNCGEN 0"):
-                try:
-                    cam.command(cmd)
-                except CameraError:
-                    pass
+            _quiet(cam, "STOP")
+        for cam in cams:
+            cmds = ["LED 0", "SYNCGEN 0"]
+            if cam.name == driver and args.trigger:
+                cmds.append("TRIG 0")
+            if cam.name == driver and args.blink:
+                cmds.append("BLINK 0")
+            if args.trigger:
+                cmds.append("EXTSYNC 0")
+            for cmd in cmds:
+                _quiet(cam, cmd)
         time.sleep(0.3)  # let in-flight packets arrive
         for rec in recs:
             rec.finish()
@@ -258,6 +302,7 @@ def run(args) -> int:
         "started": started.isoformat() if started else None,
         "settings": {k: (str(v) if isinstance(v, Path) else v) for k, v in vars(args).items() if k != "func"},
         "sync_master": master,
+        "trigger_driver": driver,
         "cameras": [],
     }
     for rec in recs:
@@ -271,7 +316,7 @@ def run(args) -> int:
             "dropped": rec.dropped,
             "sync_pulses": rec.syncs,
             "parser_bytes_skipped": rec.cam.parser.bytes_skipped,
-            "timing": frame_timing(out / rec.cam.name, info["frame_length"]),
+            "timing": frame_timing(out / rec.cam.name, info["frame_length"], info.get("line_time_ns")),
             "error": repr(rec.error) if rec.error else None,
         })
     (out / "session.json").write_text(json.dumps(meta, indent=2))
@@ -291,6 +336,13 @@ def run(args) -> int:
             print(f"alignment failed: {e}", file=sys.stderr)
             return 1
     return 1 if failed or any(r.error for r in recs) else 0
+
+
+def _quiet(cam: Camera, cmd: str) -> None:
+    try:
+        cam.command(cmd)
+    except CameraError:
+        pass
 
 
 def _record_loop(args, cams, recs) -> None:
@@ -375,14 +427,26 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--sync-master", help="camera that drives the sync line (default: the first, if >1 camera)")
     ap.add_argument("--external-sync", action="store_true",
                     help="the sync line is driven by your rig, not by a camera")
+    ap.add_argument("--trigger", type=int, metavar="HZ",
+                    help="ESP32-P4: every camera starts each frame on a trigger edge (EXTSYNC); the "
+                         "--sync-master camera (default: the first) drives TRIG_OUT at HZ, wired to every "
+                         "sensor's GPIO0")
+    ap.add_argument("--blink", type=int, metavar="HZ",
+                    help="ESP32-P4: the --sync-master camera (default: the first) blinks the test LED on "
+                         "GPIO33 at HZ, for nireyecam-synctest")
     ap.add_argument("--duration", type=float, help="seconds (default: until Ctrl-C)")
     ap.add_argument("--format", choices=["ffv1", "raw"], default="ffv1")
-    ap.add_argument("--nominal-fps", type=float, default=30.0, help="frame rate written into the video container")
+    ap.add_argument("--nominal-fps", type=float,
+                    help="frame rate written into the video container (default: --trigger, else 30)")
     ap.add_argument("--preview", action="store_true", help="live window per camera (needs opencv-python)")
     ap.add_argument("--overwrite", action="store_true")
     args = ap.parse_args(argv)
     if not 0 <= args.led <= 1000:
         ap.error("--led must be 0-1000")
+    if args.trigger is not None and not 1 <= args.trigger <= 1000:
+        ap.error("--trigger must be 1-1000 Hz")
+    if args.blink is not None and not 1 <= args.blink <= 10000:
+        ap.error("--blink must be 1-10000 Hz")
     return run(args)
 
 

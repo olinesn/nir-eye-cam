@@ -27,6 +27,12 @@ bool syncgen_on(void);
 esp_err_t trig_set(uint32_t hz);
 uint32_t trig_hz(void);
 
+// BLINK: a 50% square wave at `hz` on PIN_BLINK (0 = off), for a visible test
+// LED that every camera films during the sync check (nireyecam-synctest). Its
+// own LEDC timer, so it runs alongside TRIG.
+esp_err_t blink_set(uint32_t hz);
+uint32_t blink_hz(void);
+
 // IR master enable: the sensor's STROBE only reaches the LEDs while this is on.
 void led_enable(bool on);
 bool led_enabled(void);
