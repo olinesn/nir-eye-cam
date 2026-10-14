@@ -21,6 +21,17 @@ To release:
 
 ## [Unreleased]
 
+### Added
+
+- `docs/hardware.md`: a **Tether and commutator** section for freely moving
+  animals. The Neuropixels cable CBL_1000 cannot carry the ESP32-P4 build's
+  USB at any speed: it is one twisted pair, and USB 2.0 needs four wires (a
+  USB-C-to-USB-C cable, five plus a shield). It compares the cable with the
+  USB 2.0 and USB-C limits, estimates the camera's power draw and the voltage
+  lost over a thin tether, summarizes Doric's 24-contact commutator, and ranks
+  the options: the camera's own cable at full speed first, then a serializer
+  over one pair, then wireless.
+
 ## [0.2.0] - 2026-10-14
 
 ### Added

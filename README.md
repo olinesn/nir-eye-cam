@@ -19,7 +19,7 @@ firmware-p4/  ESP32-P4 firmware (ESP-IDF, C) for the VD55G1 global-shutter
 common/     nec_protocol.h, the packet format both firmwares share
 host/       Python: nireyecam-record, nireyecam-align, nireyecam-list,
             plus a simulated camera for testing without hardware
-docs/       hardware.md (parts, wiring, optics, sync, safety, depth),
+docs/       hardware.md (parts, wiring, optics, sync, safety, tether, depth),
             protocol.md
 ```
 
