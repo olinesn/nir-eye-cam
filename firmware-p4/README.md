@@ -52,6 +52,10 @@ high-speed port; logs go to the board's UART / USB-serial-JTAG console.
 
 ## Bring-up order
 
+`nireyecam-bench --cam PORT` runs steps 1–4 and drafts a bench-test issue
+from them; add `--extsync <fps>` for the first half of step 5, with TRIG_OUT
+wired to the sensor's GPIO0. The blinking-LED check is still by hand.
+
 1. `INFO` over the serial port. `model_id` should read `0x53354731` (every
    VD55G1) and `revision` `0x3030` (cut 3). Cut 2 (`0x2020`) needs ST's
    firmware patch, which is not included.

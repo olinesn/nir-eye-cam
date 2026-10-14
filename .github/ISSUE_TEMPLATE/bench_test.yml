@@ -10,6 +10,9 @@ body:
         form to record what you measured, whether it confirms the assumption
         or not. A result that contradicts the code is the most useful kind.
 
+        `nireyecam-bench --cam PORT` measures most of these items in one run
+        and drafts the fields below (README: *Check a new camera on the bench*).
+
   - type: dropdown
     id: item
     attributes:
