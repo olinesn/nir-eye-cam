@@ -1,0 +1,125 @@
+# Builds both firmwares on every change to them, fails on any compiler
+# warning, and keeps the binaries as downloadable artifacts.
+#
+# Versions match the local setup in README.md: Arm GNU Toolchain 14.3.rel1 +
+# Pico SDK 2.3.1 for the RP2040, ESP-IDF v6.1 for the ESP32-P4. Actions and
+# the ESP-IDF image are pinned by digest, the toolchain by checksum.
+
+name: Firmware
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "firmware/**"
+      - "firmware-p4/**"
+      - "common/**"
+      - ".github/workflows/firmware.yml"
+  pull_request:
+    paths:
+      - "firmware/**"
+      - "firmware-p4/**"
+      - "common/**"
+      - ".github/workflows/firmware.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firmware-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ARM_TOOLCHAIN: arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi
+  ARM_TOOLCHAIN_URL: https://developer.arm.com/-/media/Files/downloads/gnu/14.3.rel1/binrel/arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi.tar.xz
+  # From Arm's published .sha256asc for that file.
+  ARM_TOOLCHAIN_SHA256: 8f6903f8ceb084d9227b9ef991490413014d991874a1e34074443c2a72b14dbd
+  PICO_SDK_REF: "2.3.1"
+
+jobs:
+  rp2040:
+    name: RP2040 (${{ matrix.board }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        board: [pico, xiao]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check out the Pico SDK
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: raspberrypi/pico-sdk
+          ref: ${{ env.PICO_SDK_REF }}
+          path: pico-sdk
+          submodules: true
+          persist-credentials: false
+
+      - name: Cache the Arm toolchain
+        id: toolchain
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/arm-toolchain
+          key: ${{ env.ARM_TOOLCHAIN }}
+
+      - name: Install the Arm toolchain
+        if: steps.toolchain.outputs.cache-hit != 'true'
+        run: |
+          curl -sSfL -o toolchain.tar.xz "$ARM_TOOLCHAIN_URL"
+          echo "$ARM_TOOLCHAIN_SHA256  toolchain.tar.xz" | sha256sum -c -
+          mkdir -p ~/arm-toolchain
+          tar -xJf toolchain.tar.xz -C ~/arm-toolchain
+
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ninja-build
+
+      - name: Build
+        env:
+          BOARD: ${{ matrix.board }}
+        run: |
+          export PICO_SDK_PATH="$GITHUB_WORKSPACE/pico-sdk"
+          export PICO_TOOLCHAIN_PATH="$HOME/arm-toolchain/$ARM_TOOLCHAIN"
+          cmake -S firmware -B build -G Ninja -DNEC_BOARD="$BOARD" -DNEC_WERROR=ON
+          cmake --build build
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nir-eye-cam-${{ matrix.board }}
+          path: |
+            build/nir_eye_cam_${{ matrix.board }}.uf2
+            build/nir_eye_cam_${{ matrix.board }}.elf
+          if-no-files-found: error
+
+  esp32p4:
+    name: ESP32-P4 (VD55G1)
+    runs-on: ubuntu-24.04
+    # Espressif's official image (ESP-IDF v6.1, toolchains installed).
+    container: espressif/idf:v6.1@sha256:81893c71bb5e570088901f21def8684c25cd2a9020281bd01b843a7655edb18c
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build
+        shell: bash
+        working-directory: firmware-p4
+        run: |
+          git config --global --add safe.directory '*'
+          . "$IDF_PATH/export.sh"
+          idf.py set-target esp32p4
+          idf.py build
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nir-eye-cam-esp32p4
+          path: |
+            firmware-p4/build/nir_eye_cam_p4.bin
+            firmware-p4/build/nir_eye_cam_p4.elf
+            firmware-p4/build/bootloader/bootloader.bin
+            firmware-p4/build/partition_table/partition-table.bin
+            firmware-p4/build/flash_args
+          if-no-files-found: error

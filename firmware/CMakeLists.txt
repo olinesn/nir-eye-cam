@@ -26,6 +26,11 @@ add_executable(nir_eye_cam
 
 target_include_directories(nir_eye_cam PRIVATE src ${CMAKE_CURRENT_LIST_DIR}/../common)
 target_compile_options(nir_eye_cam PRIVATE -Wall -Wextra -Wno-unused-parameter)
+# Covers every source compiled into the target, the Pico SDK's included.
+option(NEC_WERROR "Treat compiler warnings as errors (CI)" OFF)
+if(NEC_WERROR)
+    target_compile_options(nir_eye_cam PRIVATE -Werror)
+endif()
 
 if(NEC_BOARD STREQUAL "xiao")
     target_compile_definitions(nir_eye_cam PRIVATE NEC_BOARD_XIAO=1)

@@ -37,6 +37,11 @@ instead.
 
 ## Build the firmware
 
+GitHub Actions builds both firmwares on every push or pull request that
+touches them ([.github/workflows/firmware.yml](.github/workflows/firmware.yml)),
+fails on any compiler warning, and attaches the `.uf2` / `.bin` files to the
+run as artifacts. To build locally:
+
 One-time setup (what this repo was built with): CMake and Ninja from
 Homebrew, Arm's GNU toolchain for macOS (the full one with newlib, unpacked
 to `~/pico/toolchain`), and the Pico SDK.
