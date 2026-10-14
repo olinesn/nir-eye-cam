@@ -21,7 +21,8 @@ host/       Python: nireyecam-record, nireyecam-align, nireyecam-list,
             nireyecam-bench, plus a simulated camera for testing without
             hardware
 docs/       hardware.md (parts, wiring, optics, sync, safety, tether, depth),
-            protocol.md, and design sketches for the VD55G1 builds
+            protocol.md, design sketches for the VD55G1 builds, and the
+            dual-colour miniscope (miniscope.md, sensor-bench-test.md)
 ```
 
 Read [docs/hardware.md](docs/hardware.md) first. In particular, the cameras
