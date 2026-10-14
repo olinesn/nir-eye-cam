@@ -23,6 +23,17 @@ To release:
 
 ### Added
 
+- `nireyecam-bench`: measures one camera on the bench and drafts a **Bench
+  test result** issue. It reports:
+  - frame rate, timing jitter and dropped frames, at the default and the
+    shortest frame length (the second shows what the USB link carries);
+  - exposure linearity and black level;
+  - the analog-gain steps;
+  - the IR LEDs' effect on the image;
+  - the sync loopback and, on the ESP32-P4, the sensor's model ID,
+    `csi_errors` and external sync (`--extsync`).
+
+  Each covered form item gets a suggested result. Works on the simulator.
 - `docs/vd55g1-fpdlink.md`: a design sketch for a freely moving build. Only
   the VD55G1 and a TI DS90UB953 serializer ride on the head; one thin coax
   through two of the commutator's four free contacts carries power, video,
