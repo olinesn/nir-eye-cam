@@ -1,0 +1,22 @@
+# Sections for GitHub's automatically generated release notes (the "Generate
+# release notes" button on a new release, or `gh release create
+# --generate-notes`). They list merged pull requests, sorted by label: a pull
+# request with several labels goes in the first matching section. Changes
+# pushed straight to main do not appear, so CHANGELOG.md stays the full
+# record of each release.
+
+changelog:
+  categories:
+    - title: Bug fixes
+      labels: [bug]
+    - title: New features and improvements
+      labels: [enhancement]
+    - title: Bench-test findings
+      labels: [bench-test]
+    - title: Documentation
+      labels: [documentation]
+    # Dependabot labels its pull requests "dependencies".
+    - title: Dependencies
+      labels: [dependencies]
+    - title: Other changes
+      labels: ["*"]
