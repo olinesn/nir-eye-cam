@@ -331,7 +331,9 @@ miniscope on a Mira, STARVIS 2 or IMX900 sensor.
 ## Plan, risk first
 
 0. **Answers from vendors:** Fig. 21 of DS13604 (the VD55G1's QE curve), the
-   Mira050 QE curve from ams, and ChipPack's VD55G1 PLCC drawing.
+   Mira050 QE curve from ams, and ChipPack's VD55G1 PLCC drawing. The full
+   list, with the bench step each answer affects, is in
+   [sensor-bench-test.md](sensor-bench-test.md#questions-for-the-vendors).
 1. **Sensor bench test:** the VD55G1 against a Mira050, lensless and then
    behind identical optics on green and red fluorescent samples, plus the
    two-LED alternation on each. The full plan is in
