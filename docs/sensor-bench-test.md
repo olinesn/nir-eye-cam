@@ -208,6 +208,10 @@ One manifest row per capture, each of at least 2 frames:
   from that pair.
 - `--crop` limits the statistics to the centre of the frame. The
   corner-to-centre response always uses the whole frame.
+- **Binned captures** (step 1) are rows of their own: give them their own
+  `gain` label, e.g. `1x 2x2`, and the binned pixel pitch in `pixel_um`
+  (4.32 µm for the VD55G1, 5.58 µm for the Mira050), so they are fitted
+  separately and their QE uses the right pixel area.
 
 ### Part 2: `snr`
 
