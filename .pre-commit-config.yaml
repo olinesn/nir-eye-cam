@@ -73,7 +73,7 @@ repos:
         entry: python scripts/wiring.py --check
         language: python
         additional_dependencies: [pyyaml==6.0.2]
-        files: ^(README\.md|docs/wiring\.yml|scripts/wiring\.py|firmware/src/board_pins\.h|firmware-p4/main/board\.h)$
+        files: ^(README\.md|docs/wiring\.yml|scripts/wiring\.py|firmware-p4/main/board\.h)$
         pass_filenames: false
 
   # Python: bug-catching lint rules only (configured in host/pyproject.toml);
