@@ -168,7 +168,88 @@ Mira050 pixel 1.74 µm, so **compare per cell, not per pixel:** sum each
     File its report as a [Bench test result](../.github/ISSUE_TEMPLATE/bench_test.yml)
     issue. `nireyecam-bench` speaks only this repo's firmware, so it cannot
     test a Mira050 on a vendor board, and it does not do photon transfer, QE
-    or per-cell SNR: Parts 1–2 need their own analysis.
+    or per-cell SNR: `nireyecam-sensortest` (below) analyses Parts 1–3.
+
+## Analysis: `nireyecam-sensortest`
+
+Three subcommands read the recorded frames and fill most of the results
+table. Frames can be `.npy` stacks (frames × height × width, any integer
+type), raw `.u8` or `.u16` files (with `--size WxH`, or a `<file>.json`
+sidecar giving `width` and `height`), or a `nireyecam-record` camera folder.
+Each command writes a Markdown report (`--out`) and, with `--json`, every
+number. Results in electrons do not depend on how the DN are scaled, since
+the conversion gain is measured in the same DN.
+
+### Part 1: `ptc`
+
+```bash
+nireyecam-sensortest ptc ptc.csv --crop 0.5 --json ptc.json
+```
+
+One manifest row per capture, each of at least 2 frames:
+
+| Column | Meaning |
+|---|---|
+| `sensor` | The sensor's name; the report has one column per sensor |
+| `gain` | A label for the analog gain, e.g. `1x` |
+| `band` | The emission filter, e.g. `525/50`; leave it empty on dark rows |
+| `kind` | `light` or `dark` |
+| `exposure_ms` | Exposure time |
+| `irradiance_w_m2` | At the sensor plane; light rows only. Without it there is no QE |
+| `wavelength_nm` | The band's centre, for the photon energy |
+| `pixel_um` | Pixel pitch |
+| `file` | The frames, relative to the manifest |
+
+- Sweep the exposure from dark to past saturation in about 50 even steps.
+- Take a dark capture at every light exposure, as EMVA 1288 does. Each light
+  capture uses the dark of the same sensor and gain at the nearest exposure.
+- Make one light capture near half of saturation with 16 or more frames,
+  and its dark likewise: PRNU, DSNU and the corner-to-centre response come
+  from that pair.
+- `--crop` limits the statistics to the centre of the frame. The
+  corner-to-centre response always uses the whole frame.
+
+### Part 2: `snr`
+
+```bash
+nireyecam-sensortest snr snr.csv --cell-um 12 --field-um 500 --target-snr 100
+```
+
+One manifest row per run:
+
+| Column | Meaning |
+|---|---|
+| `sensor`, `channel` | E.g. `VD55G1`, `red` |
+| `power_mw_mm2` | Excitation at the sample plane |
+| `sample_px_um` | One pixel's size in the sample: pixel pitch ÷ magnification |
+| `file`, `dark` | The frames, and a dark capture at the same exposure. Without the dark, the black level counts as signal |
+| `k_dn_per_e` | Optional: the conversion gain from `ptc`, for results in electrons |
+| `fps` | Optional: drift per minute, and the LED's change over the first minute |
+| `period_frames` | Optional: marks a small-signal run (step 7), with the LED stepped every N frames |
+| `regions` | Optional: a CSV of `x,y` centres in pixels (beads, say). Otherwise 12 µm disks tile the central `--field-um` of the sample, the same piece of sample for both sensors |
+
+SNR per region is its mean over its frame-to-frame noise (differences of
+consecutive frames ÷ √2, so slow drift does not count as noise). The report
+gives medians over the regions, and for each sensor and channel the power
+that reaches `--target-snr`, interpolated (log-log) between runs.
+
+### Part 3: `alternation`
+
+```bash
+nireyecam-sensortest alternation runs/two-colour/cam --dark dark.npy \
+    --green-roi 0,0,300,704 --red-roi 500,0,804,704
+nireyecam-sensortest alternation runs/red-only/cam --dark dark.npy --leak-roi 200,200,600,500
+```
+
+- Labels come from the parity of the sensor frame counter in `frames.csv`,
+  so a dropped frame does not shift them. Other inputs fall back to the
+  frame index, which assumes no dropped frames.
+- **Two-colour target** (step 10): finds which parity is the blue frames and
+  counts the frames whose content disagrees with their label.
+- **One-colour target** (step 11): the dim frames' signal as a percentage of
+  the bright frames'. This includes the other LED genuinely exciting the
+  dye; image the target under each LED alone to separate that from timing
+  leakage.
 
 ## Results
 
