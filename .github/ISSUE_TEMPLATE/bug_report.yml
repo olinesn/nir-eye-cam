@@ -12,6 +12,8 @@ body:
         **Security problem?** Don't report it here: see SECURITY.md for how to
         report it privately.
 
+        **Just a question?** Ask in Discussions > Q&A instead.
+
   - type: dropdown
     id: area
     attributes:

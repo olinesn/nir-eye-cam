@@ -1,0 +1,47 @@
+# Form for new discussions in the Q&A category. The file name must match the
+# category's slug (q-a).
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask anything about building, flashing or using the cameras. Someone
+        can mark an answer as accepted, so it is easy to find later.
+
+        Something that does not work as the docs describe is a bug: please
+        use the **Bug report** issue form instead. For a security problem,
+        see SECURITY.md.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Hardware (parts, wiring, optics, IR illumination)
+        - RP2040 camera (XIAO RP2040 / Pico, HM01B0)
+        - ESP32-P4 camera (VD55G1)
+        - Recording and alignment (nireyecam tools)
+        - Building or flashing firmware
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: What you want to do or understand.
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What you have tried
+      description: Commands, settings, or docs you followed, and what happened.
+
+  - type: textarea
+    id: setup
+    attributes:
+      label: Your setup
+      description: Board, sensor module, lens, firmware version or commit, computer and OS, as far as they matter.
+      placeholder: e.g. XIAO RP2040 + Arducam HM01B0, 6 mm M8 lens, firmware from the v0.1.0 release, macOS 26

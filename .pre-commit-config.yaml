@@ -44,6 +44,10 @@ repos:
         files: ^\.github/ISSUE_TEMPLATE/[^/]+\.yml$
         args: [--builtin-schema, vendor.github-issue-forms]
       - id: check-jsonschema
+        name: Validate discussion forms
+        files: ^\.github/DISCUSSION_TEMPLATE/[^/]+\.yml$
+        args: [--builtin-schema, vendor.github-discussion]
+      - id: check-jsonschema
         name: Validate CITATION.cff
         files: ^CITATION\.cff$
         types_or: [text]

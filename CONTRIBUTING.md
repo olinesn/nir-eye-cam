@@ -126,6 +126,8 @@ included.
 
 ## Commits and pull requests
 
+- Questions about building or using the cameras go in **Discussions > Q&A**,
+  which has its own form.
 - Issues have three forms: bug report, feature request, and **bench test
   result**. Use the last to record what a measurement on real hardware
   showed for anything marked `VERIFY`, whether or not it matches the code.
