@@ -18,8 +18,8 @@ firmware-p4/  ESP32-P4 firmware (ESP-IDF, C) for the VD55G1 global-shutter
             build: MIPI CSI-2 capture, same protocol (compiles; not yet run)
 common/     nec_protocol.h, the packet format both firmwares share
 host/       Python: nireyecam-record, nireyecam-align, nireyecam-list,
-            nireyecam-bench, plus a simulated camera for testing without
-            hardware
+            nireyecam-bench, nireyecam-sensortest, plus a simulated camera
+            for testing without hardware
 docs/       hardware.md (parts, wiring, optics, sync, safety, depth),
             protocol.md, miniscope.md (dual-colour calcium imaging) and
             sensor-bench-test.md (its sensor comparison)
@@ -189,6 +189,19 @@ sensor's GPIO0. The report suggests Confirms or Differs for each item, and
 leaves the numbers-only items, such as frame rate, to you. The camera's
 settings are restored at the end and the IR LEDs left off. Try it with
 `--cam sim`.
+
+## Analyse the sensor bench test
+
+`nireyecam-sensortest` analyses the miniscope's sensor comparison
+([docs/sensor-bench-test.md](docs/sensor-bench-test.md)) from recorded
+frames: photon transfer, QE, dark current and nonuniformity (`ptc`),
+signal-to-noise per cell against excitation power (`snr`), and the two-LED
+alternation (`alternation`). Its manifest columns are listed in that doc.
+
+```bash
+nireyecam-sensortest ptc ptc.csv --crop 0.5 --json ptc.json   # writes ptc-report.md
+nireyecam-sensortest snr snr.csv --target-snr 100              # writes snr-report.md
+```
 
 ## Test
 

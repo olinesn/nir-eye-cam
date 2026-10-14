@@ -13,7 +13,7 @@ pull request, and the rules that keep the pieces in agreement.
 | `firmware/` | RP2040 firmware (Pico SDK) for the Arducam HM01B0 module on a XIAO RP2040 or Pico |
 | `firmware-p4/` | ESP32-P4 firmware (ESP-IDF) for the ST VD55G1 global-shutter sensor |
 | `common/nec_protocol.h` | The packet header both firmwares use |
-| `host/` | `nireyecam`: recorder, aligner, camera discovery, and a simulated camera |
+| `host/` | `nireyecam`: recorder, aligner, camera discovery, bench tools, and a simulated camera |
 | `docs/` | Hardware, protocol, the VD55G1 build, and the miniscope design |
 
 ## Set up
