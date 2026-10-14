@@ -44,6 +44,13 @@ To release:
   and indicator crosstalk, and compares candidate sensors (VD55G1, ams
   Mira050/Mira220, Sony IMX900 and IMX662, PYTHON480) per cell of tissue.
   Design only; open questions are marked VERIFY.
+- `docs/sensor-bench-test.md`: the bench test plan for choosing between the
+  VD55G1 and the Mira050. Lensless EMVA 1288-style measurements (photon
+  transfer, QE through the real emission filters, dark current, fixed-pattern
+  noise, corner fall-off), signal-to-noise per cell on fluorescent samples
+  behind identical optics, two-LED alternation on each sensor, power and heat,
+  a results table and decision rules. The winner's ESP32-P4 build is then
+  checked with `nireyecam-bench`.
 
 ## [0.2.0] - 2026-10-14
 

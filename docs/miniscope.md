@@ -312,11 +312,11 @@ miniscope on a Mira, STARVIS 2 or IMX900 sensor.
 
 0. **Answers from vendors:** Fig. 21 of DS13604 (the VD55G1's QE curve), the
    Mira050 QE curve from ams, and ChipPack's VD55G1 PLCC drawing.
-1. **Sensor bench test:** the clear VD55G1 module and a Mira050 on the same
-   ESP32-P4 carrier. Photon-transfer curves at 525 and 620 nm through the real
-   filters, and frame-to-frame noise on green and red fluorescent slides at
-   about 1 mW/mm². If jRCaMP1b at low power looks marginal, add an IMX662 mono
-   module as the low-noise reference.
+1. **Sensor bench test:** the VD55G1 against a Mira050, lensless and then
+   behind identical optics on green and red fluorescent samples, plus the
+   two-LED alternation on each. The full plan is in
+   [sensor-bench-test.md](sensor-bench-test.md). If jRCaMP1b at low power
+   looks marginal, add an IMX662 mono module as the low-noise reference.
 2. **Excitation bench test:** two LEDs with half-balls and their exciters
    merged by a T510lpxr. Measure the field's evenness and the LEDs' stability
    frame to frame and over the first minute.

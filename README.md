@@ -21,7 +21,8 @@ host/       Python: nireyecam-record, nireyecam-align, nireyecam-list,
             nireyecam-bench, plus a simulated camera for testing without
             hardware
 docs/       hardware.md (parts, wiring, optics, sync, safety, depth),
-            protocol.md, miniscope.md (dual-colour calcium imaging)
+            protocol.md, miniscope.md (dual-colour calcium imaging) and
+            sensor-bench-test.md (its sensor comparison)
 ```
 
 Read [docs/hardware.md](docs/hardware.md) first. In particular, the cameras
