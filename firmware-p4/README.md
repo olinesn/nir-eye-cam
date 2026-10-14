@@ -61,13 +61,21 @@ high-speed port; logs go to the board's UART / USB-serial-JTAG console.
    frame; see the VERIFY note in `capture.c`.
 4. Measure USB throughput at a few crop sizes. `send_all()` in `main.c` is
    the first knob.
-5. External sync: fill in `vd55g1_set_external_sync()` from ST UM3224, then
-   `TRIG <fps>` on the master and `EXTSYNC 1` on every camera.
+5. External sync: `TRIG <fps>` on the master, then `EXTSYNC 1` and `START`
+   on every camera (it is refused while streaming). Keep each camera's frame
+   period (`FLL`, see `frame_period_us` in `INFO`) shorter than the trigger
+   period, or frames are missed. In `frames.csv`, frame intervals should equal
+   the trigger period with no gaps in `seq`. Then film a fast-blinking LED:
+   every camera must see it in the same state. Send `STOP` before turning the
+   trigger off, until it is known that the sensor stops without pulses.
 
 ## Known gaps
 
-- `EXTSYNC` returns an error until the UM3224 register sequence is
-  implemented. Without it, cameras free-run and are aligned by timestamps.
+- `EXTSYNC` follows ST's own Linux driver (GPIO0 = VT slave, `VT_CTRL` = 1)
+  but has not run on hardware. VERIFY which edge starts a frame, the delay to
+  the start of exposure, and that `START` and `STOP` complete with no pulses
+  arriving. With `EXTSYNC 0` (the default after `INIT`), cameras free-run and
+  are aligned by timestamps.
 - Cut 2 sensors need ST's firmware patch, which is not included. Cut 3 boots
   without it, as in ST's STM32 middleware; VERIFY that it streams correctly
   (the mainline Linux driver patches every VD55G1).

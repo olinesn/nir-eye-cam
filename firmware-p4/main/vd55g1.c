@@ -22,6 +22,7 @@ static const char* TAG = "vd55g1";
 #define REG_EXT_CLOCK             0x0220  // 32, Hz
 #define REG_MIPI_DATA_RATE        0x0224  // 32, bit/s
 #define REG_LINE_LENGTH           0x0300  // 16
+#define REG_VT_CTRL               0x0309  // 8, 1 = frames start on GPIO0 (VT slave)
 #define REG_FORMAT_CTRL           0x030A  // 8, bits per pixel
 #define REG_OIF_CTRL              0x030C  // 16, lane polarities
 #define REG_OIF_IMG_CTRL          0x030F  // 8, CSI-2 data type
@@ -276,10 +277,13 @@ esp_err_t vd55g1_set_io(vd55g1_t* s, unsigned io, vd55g1_io_mode_t mode)
 
 esp_err_t vd55g1_set_external_sync(vd55g1_t* s, bool on)
 {
-    // TODO(UM3224): configure GPIO0 as EXTERNAL_SYNC and switch frame start
-    // to it. Until then the sensor free-runs on its own timer.
-    (void)s;
-    return on ? ESP_ERR_NOT_SUPPORTED : ESP_OK;
+    // The sequence ST's own Linux driver uses: GPIO0's role, then VT_CTRL,
+    // and neither while streaming. Only GPIO0 can be the sync input (UM3224).
+    ESP_RETURN_ON_FALSE(!s->streaming, ESP_ERR_INVALID_STATE, TAG, "stop first");
+    ESP_RETURN_ON_ERROR(vd55g1_set_io(s, 0, on ? VD55G1_IO_VT_SLAVE : VD55G1_IO_INPUT), TAG, "gpio0");
+    ESP_RETURN_ON_ERROR(wr(s, REG_VT_CTRL, on ? 1 : 0, 1), TAG, "vt ctrl");
+    s->extsync = on;
+    return ESP_OK;
 }
 
 esp_err_t vd55g1_start(vd55g1_t* s)

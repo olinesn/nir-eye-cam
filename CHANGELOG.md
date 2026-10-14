@@ -21,6 +21,16 @@ To release:
 
 ## [Unreleased]
 
+### Added
+
+- ESP32-P4 firmware: `EXTSYNC 1` now works instead of returning an error.
+  Each pulse on the sensor's GPIO0 starts one frame ("VT slave" mode: GPIO0
+  mode `0x0A`, then `VT_CTRL` `0x0309` = 1, the sequence ST's own VD55G1
+  Linux driver uses). It is refused while streaming, `INIT` returns the
+  sensor to free-running, and `INFO`'s `extsync` now follows the sensor. Not
+  yet run on hardware: which edge starts a frame, the delay to exposure, and
+  `START`/`STOP` with no pulses arriving are marked VERIFY.
+
 ### Fixed
 
 - ESP32-P4 firmware: the VD55G1 would never have booted. The firmware read
