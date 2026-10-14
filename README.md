@@ -177,6 +177,8 @@ A Princeton University license, adapted from the license of Princeton's
 WordNet (SPDX `WordNet`); see [LICENSE](LICENSE). In short:
 - anyone may use, copy, modify and distribute the software for any purpose,
   without fee, provided the copyright notice and disclaimer stay on every copy;
+- it comes with no warranty, and neither Princeton University nor the
+  contributors are liable for damages arising from its use;
 - Princeton's name may not be used in advertising;
 - Princeton University holds the copyright.
 

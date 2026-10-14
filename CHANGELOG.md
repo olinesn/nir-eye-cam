@@ -54,8 +54,9 @@ commit `vX.Y.Z`.
     firmware, fails on any compiler warning, and uploads the binaries as
     artifacts. It skips commits that change only Markdown.
   - `host.yml` runs the host tests on Python 3.9 and 3.14.
-- Princeton University license, adapted from Princeton's WordNet license;
-  README status and license badges.
+- Princeton University license, adapted from Princeton's WordNet license, with
+  a limitation-of-liability clause taken from BSD-3-Clause; README status and
+  license badges.
 
 ### Fixed
 
