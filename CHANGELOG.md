@@ -34,6 +34,25 @@ To release:
     `csi_errors` and external sync (`--extsync`).
 
   Each covered form item gets a suggested result. Works on the simulator.
+- `docs/vd55g1-fpdlink.md`: a design sketch for a freely moving build. Only
+  the VD55G1 and a TI DS90UB953 serializer ride on the head; one thin coax
+  through two of the commutator's four free contacts carries power, video,
+  I²C and GPIO to a DS90UB934 deserializer and the ESP32-P4 at the base. The
+  953 runs in its backward-compatible DVP mode, 700 Mbit/s on the coax
+  instead of 4.16 Gbit/s. SYNC is timestamped at the base, so no sync wire
+  crosses the joint. The plan starts with a bench test of the link through
+  the joint on TI evaluation boards. Nothing is built.
+- `docs/hardware.md`: a **Tether and commutator** section for freely moving
+  animals. The Neuropixels cable CBL_1000 cannot carry the ESP32-P4 build's
+  USB at any speed: it is one twisted pair, and USB 2.0 needs four wires (a
+  USB-C-to-USB-C cable, five plus a shield). It compares the cable with the
+  USB 2.0 and USB-C limits, estimates the camera's power draw and the voltage
+  lost over a thin tether, summarizes Doric's 24-contact commutator, and ranks
+  the options: the camera's own cable through the joint's 4-pin auxiliary
+  port at full speed first, then a serializer over one pair, then wireless.
+  A draft of that camera cable gives the pin map, the two cables, the bench
+  checks, and the open question of where the SYNC line goes, since USB takes
+  all four contacts.
 
 - `docs/miniscope.md`: a design sketch for a dual-colour (GCaMP + red
   indicator) one-photon miniscope built from the VD55G1 build, as a
