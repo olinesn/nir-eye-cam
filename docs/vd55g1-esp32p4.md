@@ -121,6 +121,10 @@ sensor's 1.8 V GPIOs to and from the ESP32-P4's 3.3 V, and light the IR LEDs
 only while the sensor's STROBE (on during exposure) **and** the firmware's
 LED enable are both high, so the IR is off unless the host asked for it.
 
+![One camera of the ESP32-P4 build: the camera, its two IR LEDs and the eye together, and on the bench the level shifter, the LED driver, the ESP32-P4X board and the computer, joined by color-coded wires](images/esp32p4-one-camera.svg)
+
+The picture shows where each part goes; the schematic below gives the pins.
+
 ```
  P-Board (1.8 V)                 TXB0104 breakout          ESP32-P4X (header J1)
  sensor GPIO2  FSYNC_OUT ─────── A1      B1 ────────────── GPIO20 (J1-13)  FSYNC in
