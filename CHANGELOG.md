@@ -23,6 +23,14 @@ To release:
 
 ### Added
 
+- A picture of one camera's parts and wiring
+  (`docs/images/esp32p4-one-camera.svg`), in the README's Parts and wiring
+  section and beside the LED driver schematic: the camera, its IR LEDs and
+  the eye together, and on the bench the level shifter, LED driver, ESP32-P4X
+  board and computer, with color-coded wires. It carries no pin numbers, so
+  the pin header stays their only source, and it has its own light
+  background, so it reads the same in GitHub's light and dark themes.
+
 - Two-camera sync test. `nireyecam-record --trigger HZ` puts every camera on
   EXTSYNC and has the driving camera (`--sync-master`, default the first)
   output the frame trigger; `--blink HZ` has it blink a test LED on the new
