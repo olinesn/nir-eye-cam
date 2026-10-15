@@ -81,7 +81,9 @@ To release:
   phase 0 now names TI's DS90UB953-Q1 and DS90UB934-Q1 evaluation boards, the
   rework the 953 board needs for DVP mode, the coax on Molex positions 3 and
   4, and the built-in self-test as the error count, so the link can be tested
-  through the joint without a sensor.
+  through the joint without a sensor. Phase 1 notes that the P-Board clocks
+  the sensor from its own oscillator, while DVP mode needs it on the
+  serializer's clock.
 
 - ESP32-P4 build docs: the P-Board cable and reset are resolved as far as
   the documents allow. The cable is a Raspberry Pi 5 camera cable (22-pin →
