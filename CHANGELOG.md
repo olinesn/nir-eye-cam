@@ -75,6 +75,13 @@ To release:
   names positions (facing the port, latch up) instead of Molex circuit
   numbers, and the shorts, resistance and turning checks are what remains.
   The serializer sketch puts its coax on positions 3 and 4.
+- The serializer head (`docs/vd55g1-fpdlink.md`) is now the chosen design for
+  the freely moving rigs: the eye video has to be aligned to the Neuropixels
+  recording, and USB through the joint leaves no contact for SYNC. Its
+  phase 0 now names TI's DS90UB953-Q1 and DS90UB934-Q1 evaluation boards, the
+  rework the 953 board needs for DVP mode, the coax on Molex positions 3 and
+  4, and the built-in self-test as the error count, so the link can be tested
+  through the joint without a sensor.
 
 - ESP32-P4 build docs: the P-Board cable and reset are resolved as far as
   the documents allow. The cable is a Raspberry Pi 5 camera cable (22-pin →

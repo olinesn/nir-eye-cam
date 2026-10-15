@@ -156,10 +156,12 @@ build's USB ([vd55g1-esp32p4.md](vd55g1-esp32p4.md)). In short:
   wires. USB 2.0 needs four (VBUS, GND, D+, D−), and a USB-C-to-USB-C cable
   needs five plus a shield. New connectors do not add wires, so do not cut
   one for this.
-- **Give the camera its own cable through the same commutator.** On our rigs'
-  joint (HDMI + 4), Neuropixels takes the HDMI port and the 4-pin Molex port
-  has exactly the four wires USB 2.0 needs. Start at USB full speed, then
-  bench-test high speed through the joint (**VERIFY**).
+- **The plan: a serializer head over one thin coax**
+  ([vd55g1-fpdlink.md](vd55g1-fpdlink.md)), through two of the four contacts
+  the joint has free. The eye video has to be aligned to the Neuropixels
+  recording, and USB through the joint (option 1 below) leaves no contact for
+  the sync line. Option 1 stays the quicker way to try a camera through the
+  joint, without sync.
 
 ### CBL_1000 against USB 2.0
 
@@ -224,7 +226,10 @@ while rotating, up to 40 rpm. They come with HDMI + 4-pin Molex, 2 × PZN-12,
   2.0's VBUS, GND, D+ and D−. Both are empty on our rig and have a pin in
   each cavity; ask Doric for the current rating per contact.
 
-### Options, in order
+### Options
+
+We chose option 2: the eye video has to be aligned to the Neuropixels
+recording, and option 1 uses every free contact, leaving none for SYNC.
 
 1. **The camera's own cable through the 4-pin Molex port, full speed first.**
    Two cables, each with a Molex plug: one from the rotor to the camera

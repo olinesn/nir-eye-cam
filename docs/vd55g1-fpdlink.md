@@ -1,7 +1,9 @@
 # Design sketch: VD55G1 serializer head over one coax (FPD-Link III)
 
-Status: **design only, nothing built**. Items marked **VERIFY** are open
-questions that could change the design; the plan below tests them first.
+Status: **design only, nothing built**; the chosen design for the freely
+moving rigs (see "Options" in [hardware.md](hardware.md)). Items marked
+**VERIFY** are open questions that could change the design; the plan below
+tests them first.
 
 Why this build: on a freely moving animal the camera's cable has to pass the
 commutator, and the rigs' Doric joint has only four contacts free for it
@@ -146,13 +148,26 @@ locally. No sync wire crosses the joint.
 
 ## Plan, risk first
 
-0. **Prove the link through the joint before designing anything.** TI's
-   DS90UB953-Q1 and DS90UB934-Q1 evaluation boards, the 953 strapped to DVP
-   mode with a 25 MHz CLKIN (SNLA270 §2–3), joined by ~1 m of micro-coax on
-   each side of the Doric joint's Molex port. Power the 953 locally first, as
-   SNLA270 recommends for debugging, then over the coax. Watch lock and the
-   934's error counters while turning the joint by hand for many minutes.
-   Retry at 50 MHz to see how much margin there is.
+0. **Prove the link through the joint before designing anything.** No sensor
+   is needed: both chips have a built-in self-test (BIST) that counts link
+   errors (the 953's `BIST_ERR_CNT`, register 0x54), and the 953 can generate
+   test video. **VERIFY** both run in DVP mode.
+   - **Boards:** TI's [DS90UB953-Q1EVM](https://www.ti.com/tool/DS90UB953-Q1EVM)
+     and [DS90UB934-Q1EVM](https://www.ti.com/tool/DS90UB934-Q1EVM). TI lists
+     them as compatible. Both have FAKRA coax connectors, and the 934 board
+     has a USB bridge for TI's Analog LaunchPAD register tool.
+   - **Rework for DVP mode** (SNLA270 §2): on the 953 board, fit the 0 Ω
+     resistor at R1 that enables its on-board oscillator for CLKIN and strap
+     MODE to DVP. SNLA270 asks for 100 nF and 47 nF AC-coupling capacitors
+     with a 49.9 Ω load on both sides, for the slower back channel: change
+     them on the 953 board and check the 934 board's values.
+   - **Through the joint:** a FAKRA-to-micro-coax pigtail on each board, ~1 m
+     of micro-coax on each side, centre to position 3 and shield to 4 of the
+     Molex 4-pin port (positions as in hardware.md's camera cable draft).
+   - **Test:** power the 953 locally first, as SNLA270 recommends for
+     debugging, then over the coax. Run BIST while turning the joint by hand
+     for many minutes and count errors and losses of lock. Then raise CLKIN
+     towards 50 MHz to see how much margin there is.
 1. **Sensor on the link:** the CAM-5G1 on its P-Board, CSI-2 into the 953
    board (pinout and lane polarity checked), the 934's parallel output into an
    ESP32-P4 dev board's DVP pins. RAW10 frames, then RAW8 NEC1 packets into
