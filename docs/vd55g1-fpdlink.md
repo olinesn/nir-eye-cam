@@ -90,10 +90,11 @@ What DVP mode costs:
 
 ## Through the commutator
 
-- **Two of the four Molex contacts:** the coax centre on one, its shield on
-  the neighbouring one. That leaves two spare. If power on the coax proves
-  noisy through the slip ring, use them for a separate DC pair and drop the
-  PoC networks.
+- **Two of the four Molex contacts:** the coax centre on position 3 and its
+  shield on 4, the bottom row (positions as in hardware.md's camera cable
+  draft; the joint passes each position straight through). That leaves the
+  top row, 1 and 2, spare. If power on the coax proves noisy through the slip
+  ring, use them for a separate DC pair and drop the PoC networks.
 - **Evidence:** Doric lists the UCLA Miniscope V4, whose single coax carries
   power, control and video, as tested through this model of joint, but
   through Doric's own adapter on the HDMI port. The Micro-Fit path is

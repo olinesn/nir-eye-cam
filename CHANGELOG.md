@@ -68,6 +68,14 @@ To release:
 
 ### Changed
 
+- `docs/hardware.md` camera cable draft: the Doric joint's 4-pin ports were
+  checked on the rig. They have a pin in each cavity, so both cables use the
+  43025-0400 receptacle housing with female terminals, and each position
+  reaches the same position on the other side of the joint. The pin map now
+  names positions (facing the port, latch up) instead of Molex circuit
+  numbers, and the shorts, resistance and turning checks are what remains.
+  The serializer sketch puts its coax on positions 3 and 4.
+
 - ESP32-P4 build docs: the P-Board cable and reset are resolved as far as
   the documents allow. The cable is a Raspberry Pi 5 camera cable (22-pin →
   15-pin): the P-Board's output uses the Pi 5 pinout, and the ESP32-P4X
