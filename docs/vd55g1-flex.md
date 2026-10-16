@@ -107,6 +107,12 @@ at both ends.
 
 A also fits a Raspberry Pi 4 directly, and a Pi 5 through a 15-to-22-pin cable.
 
+**Not behind the serializer as drawn.** In the 953's DVP mode the sensor must
+run from the serializer's own clock ([vd55g1-fpdlink.md](vd55g1-fpdlink.md)),
+so an oscillator on the paddle would fight it, which is the same problem the
+P-Board has. If A or B is built anyway, fit the oscillator through a 0 Ω link
+and bring CLKIN out to a pad, so a serializer board can feed it instead.
+
 ### B. Raspberry Pi 5 pinout: 22-pin end
 
 The same paddle parts on an 11.5 × 22 mm end with 22 contacts at 0.5 mm pitch,
@@ -122,7 +128,9 @@ before copying it.
 
 The tail simply ends in a 6.6 mm wide tab with 20 contacts at 0.3 mm pitch,
 for a back-flip ZIF socket on whatever board serves the camera. All the
-parts move off the flex:
+parts move off the flex, including the oscillator: CLKIN comes down the flex
+from that board, which is what the serializer needs (its DVP mode runs the
+sensor from the serializer's clock):
 
 - **On the bench**, a small rigid adapter board (about 24 × 22 mm) carries the
   ZIF socket, the regulators, oscillator and level shifting from option A, and
@@ -156,16 +164,21 @@ design is settled.
 | Far end | 16 mm paddle with parts | 11.5 mm paddle with parts | 6.6 mm tab, no parts | the maker's |
 | ESP32-P4X | plugs in directly | through the 22-to-15 cables | through the adapter board | depends |
 | Raspberry Pi | Pi 4; Pi 5 via 15-to-22 cable | Pi 5, Zero, CM directly | through the adapter, if it has a Pi socket | depends |
-| Serializer head / custom carrier | no | no | plugs in directly | yes |
+| Serializer head / custom carrier | no: its own oscillator (as the P-Board) | no: the same | plugs in directly; the serializer clocks the sensor | yes |
+| Sensor clock (CLKIN) | oscillator on the paddle | oscillator on the paddle | from the board it plugs into | the maker's |
 | Sync and strobe GPIOs | pads on the paddle | pads on the paddle | in the flex | yes |
 | To make | one flex, assembled | one flex, assembled | a bare flex (one connector) + a small rigid board | NRE and minimum order |
 
 ## Recommendation
 
 **C**, with the bench adapter. The freely moving rigs will use the serializer
-head, and C is the only flex that serves both the bench and that head. It is
-also the simplest flex to make, with one connector and no other parts. The
-adapter is an ordinary rigid board, easy to change.
+head, and the cameras are being prototyped plugged into a serializer rather
+than an ESP32-P4 board. C is the only flex that serves both the bench and
+that head, and the only one that takes its clock from the board it plugs
+into, as the serializer requires. It is also the simplest flex to make, with
+one connector and no other parts. The adapter is an ordinary rigid board,
+easy to change. Choose C's far-end connector to match the serializer
+prototype's board, or put it on the adapter.
 
 If one part that plugs straight into the ESP32-P4X matters more, **A**. Pick
 **B** only if trying the camera on a Raspberry Pi 5 first matters.
