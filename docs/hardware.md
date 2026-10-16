@@ -156,10 +156,12 @@ build's USB ([vd55g1-esp32p4.md](vd55g1-esp32p4.md)). In short:
   wires. USB 2.0 needs four (VBUS, GND, D+, D−), and a USB-C-to-USB-C cable
   needs five plus a shield. New connectors do not add wires, so do not cut
   one for this.
-- **Give the camera its own cable through the same commutator.** On our rigs'
-  joint (HDMI + 4), Neuropixels takes the HDMI port and the 4-pin Molex port
-  has exactly the four wires USB 2.0 needs. Start at USB full speed, then
-  bench-test high speed through the joint (**VERIFY**).
+- **The plan: a serializer head over one thin coax**
+  ([vd55g1-fpdlink.md](vd55g1-fpdlink.md)), through two of the four contacts
+  the joint has free. The eye video has to be aligned to the Neuropixels
+  recording, and USB through the joint (option 1 below) leaves no contact for
+  the sync line. Option 1 stays the quicker way to try a camera through the
+  joint, without sync.
 
 ### CBL_1000 against USB 2.0
 
@@ -221,10 +223,13 @@ while rotating, up to 40 rpm. They come with HDMI + 4-pin Molex, 2 × PZN-12,
   at the headstage, one cable on each side of the joint. The "+4 auxiliary
   contact" connectors are 4-pin Molex Micro-Fit 3.0 ports on the rotor and the
   stator, for "custom use" in Doric's manual: four contacts, the same as USB
-  2.0's VBUS, GND, D+ and D−. **VERIFY** that nothing else on the rig uses
-  them, and ask Doric for the current rating per contact.
+  2.0's VBUS, GND, D+ and D−. Both are empty on our rig and have a pin in
+  each cavity; ask Doric for the current rating per contact.
 
-### Options, in order
+### Options
+
+We chose option 2: the eye video has to be aligned to the Neuropixels
+recording, and option 1 uses every free contact, leaving none for SYNC.
 
 1. **The camera's own cable through the 4-pin Molex port, full speed first.**
    Two cables, each with a Molex plug: one from the rotor to the camera
@@ -275,16 +280,21 @@ Option 1 as two cables, one on each side of the joint. Nothing is built yet:
 
     PC ─USB-A─ fixed-side cable, ~1 m ─ Molex ▸ stator | joint | rotor ◂ Molex ─ tether, ~1 m ─ camera
 
-| Molex circuit | Signal | USB-A pin | Wire | USB-C plug at the camera, if used |
+Positions are as seen facing the joint's 4-pin port with the latch up: 1 top
+left, 2 top right, 3 bottom left, 4 bottom right. Seen from the wire side of a
+plug, latch up, they are the same, which is the side the terminals go in from.
+
+| Position | Signal | USB-A pin | Wire | USB-C plug at the camera, if used |
 |---|---|---|---|---|
 | 1 | VBUS | 1 | red | A4, A9, B4, B9 |
 | 2 | GND | 4 | black | A1, A12, B1, B12 |
 | 3 | D+ | 3 | green | A6 |
 | 4 | D− | 2 | white | A7 |
 
-- **Both Molex ends are wired the same.** In a 2 × 2 housing, circuits 1–2
-  (power) and 3–4 (data) are neighbours whichever way the rows are numbered,
-  so the data pair stays together through the connector.
+- **Both Molex ends are wired the same.** The joint connects each position
+  straight through (measured, below), so power is the top row and data the
+  bottom row on both sides, and the data pair stays together through the
+  connector.
 - **No CC wire.** The USB-A end needs none. On a USB-C plug at the camera,
   leave CC (A5) open: the board takes VBUS directly.
 - **Fixed-side cable:** a generic USB 2.0 cable with a USB-A plug, its far end
@@ -299,19 +309,23 @@ Option 1 as two cables, one on each side of the joint. Nothing is built yet:
   fiber is unused, Doric manual Table 2.1). On the head, solder it to pads on
   the carrier: a captive cable (USB-C specification §3.4.3) is lighter than
   any USB connector.
-- **Parts** (**VERIFY** against Molex's drawings). If the joint's port shows
-  pins: receptacle housing 43025-0400 with female 43030 terminals (43030-0010
-  tin or 43030-0012 gold for 26–30 AWG, per RS listings). If it shows
-  sockets: plug housing 43020-0401 with male 43031 terminals.
+- **Parts.** The joint's ports have a pin in each cavity (checked on the
+  rig), so both cables use the receptacle housing 43025-0400 with female
+  43030 terminals: 43030-0010 tin or 43030-0012 gold for 26–30 AWG, per RS
+  listings (**VERIFY** against Molex's drawings).
 
 Bench checks, in order:
 
-1. **Map the joint** with a meter: each rotor circuit to the same stator
-   circuit, under 0.5 Ω, no pin-to-pin shorts, at several rotation angles. If
-   the map is not pin for pin, wire the fixed-side cable to match it.
-2. **Each cable end to end:** right circuit at each end, no shorts.
+1. **Map the joint.** Done on our rig (2026-10-15): each position on the
+   rotor reaches the same position on the stator. Still to check with the
+   meter: no shorts between any two pins or to the joint's body, under 0.5 Ω
+   per channel with the leads zeroed, and no dropouts while turning the rotor
+   slowly by hand with the torque assist off (the data pair, 3 and 4, matters
+   most).
+2. **Each cable end to end,** against the positions above: right position at
+   each end, no shorts.
 3. **Power only:** the fixed-side cable into the PC, nothing on the rotor.
-   Expect ~5 V between circuits 1 and 2 and ~0 V on 3 and 4. Mate the Molex
+   Expect ~5 V between positions 1 and 2 and ~0 V on 3 and 4. Mate the Molex
    plugs first and the USB-A last: a USB plug's power pins touch before its
    data pins (USB 2.0 §7.2.4.1), and nothing guarantees that order at the
    Molex.

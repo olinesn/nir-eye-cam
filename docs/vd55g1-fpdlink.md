@@ -1,7 +1,9 @@
 # Design sketch: VD55G1 serializer head over one coax (FPD-Link III)
 
-Status: **design only, nothing built**. Items marked **VERIFY** are open
-questions that could change the design; the plan below tests them first.
+Status: **design only, nothing built**; the chosen design for the freely
+moving rigs (see "Options" in [hardware.md](hardware.md)). Items marked
+**VERIFY** are open questions that could change the design; the plan below
+tests them first.
 
 Why this build: on a freely moving animal the camera's cable has to pass the
 commutator, and the rigs' Doric joint has only four contacts free for it
@@ -90,10 +92,11 @@ What DVP mode costs:
 
 ## Through the commutator
 
-- **Two of the four Molex contacts:** the coax centre on one, its shield on
-  the neighbouring one. That leaves two spare. If power on the coax proves
-  noisy through the slip ring, use them for a separate DC pair and drop the
-  PoC networks.
+- **Two of the four Molex contacts:** the coax centre on position 3 and its
+  shield on 4, the bottom row (positions as in hardware.md's camera cable
+  draft; the joint passes each position straight through). That leaves the
+  top row, 1 and 2, spare. If power on the coax proves noisy through the slip
+  ring, use them for a separate DC pair and drop the PoC networks.
 - **Evidence:** Doric lists the UCLA Miniscope V4, whose single coax carries
   power, control and video, as tested through this model of joint, but
   through Doric's own adapter on the HDMI port. The Micro-Fit path is
@@ -145,17 +148,36 @@ locally. No sync wire crosses the joint.
 
 ## Plan, risk first
 
-0. **Prove the link through the joint before designing anything.** TI's
-   DS90UB953-Q1 and DS90UB934-Q1 evaluation boards, the 953 strapped to DVP
-   mode with a 25 MHz CLKIN (SNLA270 §2–3), joined by ~1 m of micro-coax on
-   each side of the Doric joint's Molex port. Power the 953 locally first, as
-   SNLA270 recommends for debugging, then over the coax. Watch lock and the
-   934's error counters while turning the joint by hand for many minutes.
-   Retry at 50 MHz to see how much margin there is.
+0. **Prove the link through the joint before designing anything.** No sensor
+   is needed: both chips have a built-in self-test (BIST) that counts link
+   errors (the 953's `BIST_ERR_CNT`, register 0x54), and the 953 can generate
+   test video. **VERIFY** both run in DVP mode.
+   - **Boards:** TI's [DS90UB953-Q1EVM](https://www.ti.com/tool/DS90UB953-Q1EVM)
+     and [DS90UB934-Q1EVM](https://www.ti.com/tool/DS90UB934-Q1EVM). TI lists
+     them as compatible. Both have FAKRA coax connectors, and the 934 board
+     has a USB bridge for TI's Analog LaunchPAD register tool.
+   - **Rework for DVP mode** (SNLA270 §2): on the 953 board, fit the 0 Ω
+     resistor at R1 that enables its on-board oscillator for CLKIN and strap
+     MODE to DVP. SNLA270 asks for 100 nF and 47 nF AC-coupling capacitors
+     with a 49.9 Ω load on both sides, for the slower back channel: change
+     them on the 953 board and check the 934 board's values.
+   - **Through the joint:** a FAKRA-to-micro-coax pigtail on each board, ~1 m
+     of micro-coax on each side, centre to position 3 and shield to 4 of the
+     Molex 4-pin port (positions as in hardware.md's camera cable draft).
+   - **Test:** power the 953 locally first, as SNLA270 recommends for
+     debugging, then over the coax. Run BIST while turning the joint by hand
+     for many minutes and count errors and losses of lock. Then raise CLKIN
+     towards 50 MHz to see how much margin there is.
 1. **Sensor on the link:** the CAM-5G1 on its P-Board, CSI-2 into the 953
    board (pinout and lane polarity checked), the 934's parallel output into an
    ESP32-P4 dev board's DVP pins. RAW10 frames, then RAW8 NEC1 packets into
-   `nireyecam-record`.
+   `nireyecam-record`. **Clock catch:** the P-Board clocks the sensor from its
+   own oscillator (12 MHz in ST's overlay, `firmware-p4/main/board.h`), but in
+   DVP mode the sensor must run from the 953's clock, directly or through the
+   953's CLK_OUT, or "a variation or drift in CSI-2 data could cause buffer
+   overflows" (SNLA270 §6). **VERIFY** whether the P-Board's CLKIN can be fed
+   from the 953 board; if not, this step waits for the head board, or runs
+   only as a short, drift-tolerant check.
 2. **Sync:** time-aligned first, then the back-channel trigger to GPIO0 with
    two heads on one trigger line; measure the exposure skew with a
    fast-blinking LED.
