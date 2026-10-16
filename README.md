@@ -23,7 +23,8 @@ host/       Python: nireyecam-record, nireyecam-align, nireyecam-list,
             nireyecam-bench, nireyecam-sensortest, plus a simulated camera
             for testing without hardware
 docs/       vd55g1-esp32p4.md (the ESP32-P4 build), vd55g1-fpdlink.md (a
-            serializer head for freely moving animals), wiring.yml (the
+            serializer head for freely moving animals), vd55g1-flex.md (the
+            module on a narrow flex), wiring.yml (the
             parts and wiring drawn below), hardware.md (illumination and
             safety, sync, tether, depth, and the RP2040 build), protocol.md,
             and the dual-colour miniscope (miniscope.md, sensor-bench-test.md)
