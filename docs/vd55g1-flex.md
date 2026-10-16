@@ -65,8 +65,33 @@ What the tail carries, about 18 conductors:
 | GPIO0, GPIO1, GPIO2, GPIO3 | 4 | EXTSYNC in, STROBE out, FSYNC_OUT, spare: roles as in [vd55g1-esp32p4.md](vd55g1-esp32p4.md) |
 | VANA_2V8, VDDIO_1V8, VCORE_1V15 | 3 | The module's supplies, made at the far end |
 
-The module's pin numbers are in ST's data brief DB5267 (figure 1). **VERIFY**
-them against the P-Board's schematic before layout.
+The module's 30-pin connector, from the spec sheet of the module's maker
+(Chongqing Zhongshunwei's ZS1320-B, the same module: see option D). ST's
+names are in brackets.
+
+| Pin | Signal | Pin | Signal |
+|---|---|---|---|
+| 1 | AVDD 2.8 V (VANA_2V8) | 2 | GND |
+| 3 | GND | 4 | DVDD 1.15 V (VCORE_1V15) |
+| 5 | DOVDD 1.8 V (VDDIO_1V8) | 6 | RSTN (XSHUTDOWN) |
+| 7 | GPIO-0 | 8 | GND |
+| 9 | GPIO-1 | 10 | DP1 (DATA1P) |
+| 11 | GPIO-2 | 12 | DN1 (DATA1N) |
+| 13 | GPIO-3 | 14 | GND |
+| 15 | NC | 16 | CKP (CLKP) |
+| 17 | NC | 18 | CKN (CLKN) |
+| 19 | NC | 20 | GND |
+| 21 | NC | 22 | NC |
+| 23 | GND | 24 | NC |
+| 25 | SCL | 26 | GND |
+| 27 | SDA | 28 | MCLK (CLKIN) |
+| 29 | GND | 30 | GND |
+
+The sensor's clock is an input on pin 28, so whatever board the flex plugs
+into can drive it. **VERIFY** against ST's DB5267 figure 1 and the P-Board's
+schematic before layout: the even pins agree with ST's figure as far as its
+text could be read, but its odd pins 19–29 could not be matched with
+certainty.
 
 ## Options
 
@@ -148,26 +173,38 @@ sensor from the serializer's clock):
 the flex thickness it takes (often 0.2 mm, set with a stiffener under the
 contacts).
 
-### D. A module integrator's custom module
+### D. Option C, built into the module by its maker
 
-A camera-module maker builds the VD55G1 into a module with its own tail, as
-phone and Pi Zero camera modules are made. It can be smaller than 5 mm, but
-it is a custom part: setup costs and minimum orders. It's for later, once the
-design is settled.
+The module's maker could make C in one piece: the VD55G1 head with the tail
+running straight from it, as phone and Pi Zero camera modules are made. Then
+there is no BM28 connector or pad at the eye, so the 5 × 5 mm sensor head is
+the widest part.
+
+- **The maker:** Chongqing Zhongshunwei Microelectronics. Its ZS1320-B
+  drawing matches ST's CAM-5G1-080NIR exactly: 11.65 × 8.0 mm, a 5 × 5 mm
+  head, 7.45 mm to the BM28 plug, a 940 nm filter. ST's partner page for the
+  "VD55G1 Camera Module" lists clear, 650, 850 and 940 nm versions, and ST's
+  data brief offers custom modules from partner integrators.
+- **What to ask for:** C's far end and signals: a polyimide tail 10–15 cm long,
+  6 mm wide or less and 0.15 mm thick or less, the MIPI pairs at 100 Ω, and 20
+  fingers at 0.3 mm pitch. A 940 nm filter (850 nm as the alternative), and
+  no oscillator at the head, since the serializer supplies MCLK.
+- **The cost:** a custom part, so likely a setup (NRE) charge and a minimum
+  order. A request is drafted, not yet sent.
 
 ## Comparison
 
-| | A: 15-pin end | B: 22-pin end | C: bare 20-pin end | D: custom module |
+| | A: 15-pin end | B: 22-pin end | C: bare 20-pin end | D: C, made by the module's maker |
 |---|---|---|---|---|
-| At the eye | module on a ~13.5 × 9 mm pad | same | same | smallest |
-| Tail | 5.5 mm wide, ~0.1–0.15 mm | same | same | the maker's |
-| Far end | 16 mm paddle with parts | 11.5 mm paddle with parts | 6.6 mm tab, no parts | the maker's |
-| ESP32-P4X | plugs in directly | through the 22-to-15 cables | through the adapter board | depends |
-| Raspberry Pi | Pi 4; Pi 5 via 15-to-22 cable | Pi 5, Zero, CM directly | through the adapter, if it has a Pi socket | depends |
-| Serializer head / custom carrier | no: its own oscillator (as the P-Board) | no: the same | plugs in directly; the serializer clocks the sensor | yes |
-| Sensor clock (CLKIN) | oscillator on the paddle | oscillator on the paddle | from the board it plugs into | the maker's |
-| Sync and strobe GPIOs | pads on the paddle | pads on the paddle | in the flex | yes |
-| To make | one flex, assembled | one flex, assembled | a bare flex (one connector) + a small rigid board | NRE and minimum order |
+| At the eye | module on a ~13.5 × 9 mm pad | same | same | the 5 × 5 mm head, no connector |
+| Tail | 5.5 mm wide, ~0.1–0.15 mm | same | same | asked for: ≤ 6 mm, ≤ 0.15 mm |
+| Far end | 16 mm paddle with parts | 11.5 mm paddle with parts | 6.6 mm tab, no parts | as C |
+| ESP32-P4X | plugs in directly | through the 22-to-15 cables | through the adapter board | as C |
+| Raspberry Pi | Pi 4; Pi 5 via 15-to-22 cable | Pi 5, Zero, CM directly | through the adapter, if it has a Pi socket | as C |
+| Serializer head / custom carrier | no: its own oscillator (as the P-Board) | no: the same | plugs in directly; the serializer clocks the sensor | as C |
+| Sensor clock (CLKIN) | oscillator on the paddle | oscillator on the paddle | from the board it plugs into | as C |
+| Sync and strobe GPIOs | pads on the paddle | pads on the paddle | in the flex | as C |
+| To make | one flex, assembled | one flex, assembled | a bare flex (one connector) + a small rigid board | the maker's NRE and minimum order, + the same rigid board |
 
 ## Recommendation
 
@@ -180,6 +217,11 @@ one connector and no other parts. The adapter is an ordinary rigid board,
 easy to change. Choose C's far-end connector to match the serializer
 prototype's board, or put it on the adapter.
 
+**The plan:** ask the module's maker to build C into the module (**D**), so the
+sensor head is the widest part. If they decline, or it costs too much, make
+C's flex ourselves with the standard module plugged into it. Either way the
+far end, and the board it plugs into, are the same.
+
 If one part that plugs straight into the ESP32-P4X matters more, **A**. Pick
 **B** only if trying the camera on a Raspberry Pi 5 first matters.
 
@@ -187,8 +229,8 @@ If one part that plugs straight into the ESP32-P4X matters more, **A**. Pick
 
 1. Hirose's drawing for the BM28 receptacle: outline, footprint, and which
    way the module's head points once mated.
-2. The module's 30 pin numbers (DB5267 figure 1) against the P-Board's
-   schematic.
+2. The module's 30 pin numbers (table above, from the ZS1320-B spec) against
+   ST's DB5267 figure 1 and the P-Board's schematic.
 3. A and B: the ESP32-P4X socket's pinout and contact side, and the P-Board's
    regulators and XSHUTDOWN circuit.
 4. C: the 0.3 mm ZIF part and the flex thickness it takes.
@@ -202,6 +244,10 @@ If one part that plugs straight into the ESP32-P4X matters more, **A**. Pick
 - ST CAM-55G1 promodule data brief DB5267 rev 2 (variants, BM28 connector,
   pinout, dimensions, the partner-integrator offer)
 - ST STEVAL-CAM-M0I (P-Board) data brief
+- Chongqing Zhongshunwei ZS1320-B (VD55G1CCB0) camera module specification,
+  2023-12-06 (drawing, pinout, BM28 connector, filter), hosted by Future
+  Electronics
+- ST partner products: "VD55G1 Camera Module" (filter options)
 - Espressif ESP32-P4X-Function-EV-Board user guide (MIPI CSI socket
   1.0K-GT-15PB: 1.0 mm pitch, 0.3 mm FPC) and its camera adapter board
   schematic (LDOs, oscillator, I²C level shifting)
