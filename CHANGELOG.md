@@ -57,6 +57,11 @@ To release:
 
 ### Fixed
 
+- ESP32-P4 firmware: with no camera attached (or one that failed to open),
+  the streaming task spun without ever waiting once a host opened the port.
+  It starved the USB link, so commands such as `INIT` and `INFO` never
+  arrived, and the task watchdog fired every 5 s. It now waits as it does
+  with a camera. Found on the first real board.
 - ESP32-P4 firmware and docs fitted to ST's P-Board as its schematic
   (PCB4280D) shows it. Its clock and data pairs are wired P/N swapped, which
   the ESP32-P4 has no ESP-IDF setting for: the firmware now writes the

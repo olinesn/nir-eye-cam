@@ -14,6 +14,7 @@
 #include "sdkconfig.h"
 #include "esp_timer.h"
 #include "freertos/queue.h"
+#include "freertos/task.h"
 #include "hal/mipi_csi_host_ll.h"
 #include "hal/mipi_csi_periph.h"
 #include "hal/mipi_csi_phy_ll.h"
@@ -288,7 +289,13 @@ esp_err_t capture_stop(void)
 bool capture_take(cap_frame_t* out, int* slot, TickType_t wait)
 {
     filled_t item;
-    if (!s_filled || xQueueReceive(s_filled, &item, wait) != pdTRUE) return false;
+    if (!s_filled) {
+        // No capture (the camera did not open): still wait, or the streaming
+        // task spins at top priority and starves USB, so commands never arrive.
+        vTaskDelay(wait ? wait : 1);
+        return false;
+    }
+    if (xQueueReceive(s_filled, &item, wait) != pdTRUE) return false;
     *out = item.f;
     *slot = item.slot;
     return true;
