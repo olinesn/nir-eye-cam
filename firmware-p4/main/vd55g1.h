@@ -43,6 +43,7 @@ typedef struct {
     uint16_t dgain;           // 256 = 1x
     bool ae;
     bool extsync;             // frames start on GPIO0 pulses
+    bool lane_swap;           // invert the clock and data pairs' P/N (OIF_CTRL)
     bool streaming;
 } vd55g1_t;
 
@@ -68,6 +69,10 @@ esp_err_t vd55g1_set_io(vd55g1_t* s, unsigned io, vd55g1_io_mode_t mode);
 // VERIFY on hardware: which edge starts a frame, the delay from it to the
 // start of exposure, and that START and STOP complete with no pulses coming.
 esp_err_t vd55g1_set_external_sync(vd55g1_t* s, bool on);
+
+// Invert the P and N of the clock and data lanes at the sensor's output, for
+// boards wired swapped (ST's P-Board), as ST's drivers do. Applied at START.
+void vd55g1_set_lane_swap(vd55g1_t* s, bool on);
 
 esp_err_t vd55g1_start(vd55g1_t* s);
 esp_err_t vd55g1_stop(vd55g1_t* s);

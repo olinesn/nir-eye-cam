@@ -30,7 +30,9 @@ static const char* TAG = "vd55g1";
 #define REG_LINE_LENGTH           0x0300  // 16
 #define REG_VT_CTRL               0x0309  // 8, 1 = frames start on GPIO0 (VT slave)
 #define REG_FORMAT_CTRL           0x030A  // 8, bits per pixel
-#define REG_OIF_CTRL              0x030C  // 16, lane polarities
+#define REG_OIF_CTRL              0x030C  // 16, lane polarities: bit 3 clock, bit 6 data
+#define OIF_CLOCK_LANE_SWAP       (1u << 3)
+#define OIF_DATA_LANE_SWAP        (1u << 6)
 #define REG_OIF_IMG_CTRL          0x030F  // 8, CSI-2 data type
 #define REG_EXPOSURE_USE_CASES    0x0312  // 8
 #define REG_ISL_ENABLE            0x0326  // 16
@@ -184,20 +186,37 @@ esp_err_t vd55g1_open(vd55g1_t* s, int sda, int scl, uint8_t addr, uint32_t i2c_
     }
     vTaskDelay(pdMS_TO_TICKS(10));
 
-    ESP_RETURN_ON_ERROR(poll(s, REG_SYSTEM_FSM, FSM_READY_TO_BOOT, 500), TAG, "sensor not ready to boot (I2C/power/clock?)");
+    // With nothing driving XSHUTDOWN (ST's P-Board), the sensor keeps its
+    // power and state through an ESP32-P4 reset or reflash, so it may already
+    // be booted, or even streaming. Bring it back to standby and skip the boot.
+    uint32_t fsm = 0;
+    ESP_RETURN_ON_ERROR(rd(s, REG_SYSTEM_FSM, &fsm, 1), TAG, "sensor not answering (I2C/power/clock?)");
+    if (fsm == FSM_STREAMING) {
+        ESP_RETURN_ON_ERROR(wr(s, REG_STREAMING, 1, 1), TAG, "stop");
+        ESP_RETURN_ON_ERROR(poll(s, REG_STREAMING, 0, 500), TAG, "stop ack");
+        ESP_RETURN_ON_ERROR(poll(s, REG_SYSTEM_FSM, FSM_SW_STBY, 500), TAG, "standby");
+        fsm = FSM_SW_STBY;
+    }
+    bool booted = fsm == FSM_SW_STBY;
+    if (!booted)
+        ESP_RETURN_ON_ERROR(poll(s, REG_SYSTEM_FSM, FSM_READY_TO_BOOT, 500), TAG,
+                            "sensor not ready to boot (I2C/power/clock?)");
     ESP_RETURN_ON_ERROR(rd(s, REG_MODEL_ID, &s->model_id, 4), TAG, "model id");
     uint32_t rev = 0;
     ESP_RETURN_ON_ERROR(rd(s, REG_REVISION, &rev, 2), TAG, "revision");
     s->revision = (uint16_t)rev;
     ESP_LOGI(TAG, "model id 0x%08lx, revision 0x%04x", (unsigned long)s->model_id, (unsigned)s->revision);
 
-    ESP_RETURN_ON_ERROR(wr(s, REG_EXT_CLOCK, ext_clk_hz, 4), TAG, "ext clock");
-
     if (s->model_id != MODEL_ID_VD55G1) {
         ESP_LOGE(TAG, "not a VD55G1");
         return ESP_ERR_NOT_FOUND;
     }
-    if (s->revision == REVISION_CUT2) {
+    if (!booted) ESP_RETURN_ON_ERROR(wr(s, REG_EXT_CLOCK, ext_clk_hz, 4), TAG, "ext clock");
+
+    if (booted) {
+        // Booted by an earlier run, with the patch if it needed one.
+        ESP_LOGI(TAG, "already booted (the sensor kept power through the reset)");
+    } else if (s->revision == REVISION_CUT2) {
         // Cut 2 boots only with ST's firmware patch: write it at 0x2000, then
         // BOOT = 2, and check the version it reports, as ST's STM32
         // middleware and the Linux driver do.
@@ -324,7 +343,7 @@ esp_err_t vd55g1_start(vd55g1_t* s)
 {
     if (s->streaming) return ESP_OK;
     ESP_RETURN_ON_ERROR(wr(s, REG_MIPI_DATA_RATE, s->mipi_bps, 4), TAG, "mipi rate");
-    wr(s, REG_OIF_CTRL, 0, 2);  // no lane polarity swap
+    wr(s, REG_OIF_CTRL, s->lane_swap ? OIF_CLOCK_LANE_SWAP | OIF_DATA_LANE_SWAP : 0, 2);
     wr(s, REG_ISL_ENABLE, 0, 2);
     // Re-apply the manual exposure state in case AE moved it.
     vd55g1_set_ae(s, s->ae);
@@ -339,6 +358,8 @@ esp_err_t vd55g1_start(vd55g1_t* s)
     s->streaming = true;
     return ESP_OK;
 }
+
+void vd55g1_set_lane_swap(vd55g1_t* s, bool on) { s->lane_swap = on; }
 
 esp_err_t vd55g1_stop(vd55g1_t* s)
 {

@@ -73,15 +73,15 @@ and GPIO0/1/45 (not connected by default) are left alone.
 What the P-Board's schematic (PCB4280D, from ST's STEVAL-CAM-M0I page)
 settles, and what is still to check with a meter before connecting it:
 
-- **Lane polarity: swapped, and the firmware swaps it back (VERIFY).** The
-  schematic says the board's clock and data pairs are wired P/N swapped
-  relative to the Raspberry Pi pinout ("MIPI Lane P/N shall be swap by SW"),
-  and ST's and Raspberry Pi's overlays for it set `lane-polarities <1 1>`.
-  ESP-IDF has no setting for this, but its D-PHY setup uses the same test
-  codes as the Raspberry Pi 5's, which swaps the pairs with two more of them.
-  `MIPI_LANE_PN_SWAP` in `board.h` (default 1) writes those, and `PNSWAP 0|1`
-  changes it without reflashing. If frames never arrive, or `csi_errors`
-  climbs, with either setting, the pairs need crossing in hardware instead.
+- **Lane polarity: swapped, and the sensor swaps it back.** The schematic
+  says the board's clock and data pairs are wired P/N swapped relative to
+  the Raspberry Pi pinout ("MIPI Lane P/N shall be swap by SW"), and ST's
+  and Raspberry Pi's overlays for it set `lane-polarities <1 1>` on the
+  sensor. The sensor can invert both lanes at its own output (`OIF_CTRL`
+  bits 3 and 6), which is what ST's drivers do with that setting.
+  `MIPI_LANE_PN_SWAP` in `board.h` (default 1) does the same, and
+  `PNSWAP 0|1` changes it without reflashing. On the first board (November
+  2026): no frames with it off; 100 fps with no CSI errors with it on.
 - **The cable: a Raspberry Pi 5 camera cable (22-pin, 0.5 mm → 15-pin,
   1.0 mm).** The P-Board's 22-pin output uses the Raspberry Pi 5 pinout (an
   ST community thread, and ST's driver keeps its files for that connector
@@ -143,7 +143,8 @@ README's "Check that two cameras expose together").
 3. Confirm the timestamps. `INFO` and `frames.csv` should show one FSYNC per
    frame; see the VERIFY note in `capture.c`.
 4. Measure USB throughput at a few crop sizes. `send_all()` in `main.c` is
-   the first knob.
+   the first knob. First board, EVO-X2 host: 320×320 at 100 fps with no
+   drops (10 MB/s); 804×704 delivered about 33 of 100 fps (about 19 MB/s).
 5. External sync: `TRIG <fps>` on the master, then `EXTSYNC 1` and `START`
    on every camera (it is refused while streaming). Keep each camera's frame
    period (`FLL`, see `frame_period_us` in `INFO`) shorter than the trigger
@@ -168,6 +169,7 @@ README's "Check that two cameras expose together").
 - `LED` is on/off (brightness set by the resistor); the sensor's STROBE
   decides when the LEDs are actually lit.
 - Changing `RES` re-creates the CSI controller; `ROI` only moves the crop.
-- `PNSWAP` writes two D-PHY test codes that ESP-IDF does not use, taken from
-  the Raspberry Pi 5's D-PHY driver because ESP-IDF's PHY setup matches it.
-  VERIFY on hardware that the ESP32-P4's PHY honours them.
+- With nothing driving XSHUTDOWN (the P-Board), the sensor is not reset with
+  the ESP32-P4: after a reset or reflash the firmware finds it already
+  booted, and uses it as it is. Switch the board off and on for a true
+  sensor reset.

@@ -67,12 +67,20 @@ To release:
   It starved the USB link, so commands such as `INIT` and `INFO` never
   arrived, and the task watchdog fired every 5 s. It now waits as it does
   with a camera. Found on the first real board.
+- ESP32-P4 firmware: the ISP was enabled although it is bypassed, which
+  ESP-IDF refuses, so the camera never opened. A bypassed ISP is now only
+  created. Found on the first real board.
+- ESP32-P4 firmware: on a board that does not drive the sensor's reset line
+  (ST's P-Board), the sensor stays booted through an ESP32-P4 reset or
+  reflash, and the firmware then gave up waiting for it to be ready to boot.
+  It now takes a sensor that is already booted (or streaming) back to
+  standby and carries on. Found on the first real board.
 - ESP32-P4 firmware and docs fitted to ST's P-Board as its schematic
-  (PCB4280D) shows it. Its clock and data pairs are wired P/N swapped, which
-  the ESP32-P4 has no ESP-IDF setting for: the firmware now writes the
-  D-PHY's swap test codes (the ones the Raspberry Pi 5 uses, whose D-PHY
-  setup ESP-IDF's matches), on by default, with a new `PNSWAP 0|1` command and
-  `pn_swap` in `INFO` to try both (not yet run on hardware). The sensor's
+  (PCB4280D) shows it. Its clock and data pairs are wired P/N swapped, so
+  the firmware now has the sensor invert both lanes at its own output
+  (`OIF_CTRL`), as ST's drivers do; on by default, with a new `PNSWAP 0|1`
+  command and `pn_swap` in `INFO`. Checked on the first board: no frames
+  with it off, frames with no CSI errors with it on. The sensor's
   STROBE moves from GPIO1 to GPIO2 (header J3) and FSYNC_OUT from GPIO2 to
   GPIO3 (test point TP2): on this board GPIO1 sets the direction of the
   buffer on GPIO0 and is brought out nowhere, so strobing it would have

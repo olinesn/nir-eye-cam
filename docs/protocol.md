@@ -66,7 +66,7 @@ Same packets and the same commands, with these differences
 | `TRIG <hz>` | new: frame-trigger square wave on TRIG_OUT (0 = off) |
 | `EXTSYNC <0\|1>` | new: start each frame on a pulse at the sensor's GPIO0 instead of its own timer (stopped only) |
 | `BLINK <hz>` | new: 50% square wave on BLINK (GPIO33) for the two-camera sync check's test LED, 0–10000 Hz (0 = off) |
-| `PNSWAP <0\|1>` | new: swap the MIPI lane P/N pairs inside the ESP32-P4 (stopped only); 1 by default, for ST's P-Board, whose pairs are wired swapped |
+| `PNSWAP <0\|1>` | new: have the sensor invert its MIPI lanes' P/N (stopped only; applied at the next `START`); 1 by default, for ST's P-Board, whose pairs are wired swapped |
 
 `INFO` adds `sensor`, `model_id`, `revision`, `x`, `y`, `line_time_ns`,
 `frame_period_us`, `dgain`, `trig_hz`, `extsync`, `blink_hz`, `csi_errors` and

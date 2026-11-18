@@ -55,10 +55,10 @@
 // The P-Board's clock and data pairs are wired P/N swapped relative to the
 // Raspberry Pi pinout, which this board's connector shares (its schematic:
 // "For use with RaspberryPi, MIPI Lane P/N shall be swap by SW"; ST's and
-// Raspberry Pi's overlays for it set lane-polarities <1 1>). 1 swaps them
-// back inside the ESP32-P4's MIPI D-PHY (capture.c), as a Raspberry Pi 5 does.
-// VERIFY: ESP-IDF has no setting for it, so this writes the D-PHY's swap test
-// codes directly; `PNSWAP 0|1` switches it at run time to try both.
+// Raspberry Pi's overlays for it set lane-polarities <1 1> on the sensor).
+// 1 has the sensor invert both lanes at its own output (OIF_CTRL bits 3 and
+// 6), exactly as ST's Linux and STM32 drivers do for that setting.
+// `PNSWAP 0|1` switches it at run time.
 #define MIPI_LANE_PN_SWAP    1
 
 // The ESP32-P4's MIPI PHY is powered from internal LDO channel 3 at 2.5 V,

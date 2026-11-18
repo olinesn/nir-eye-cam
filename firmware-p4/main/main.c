@@ -17,7 +17,7 @@
 //   TRIG <hz>        frame trigger on TRIG_OUT for every sensor's GPIO0 (0 = off)
 //   EXTSYNC <0|1>    start each frame on a GPIO0 pulse, not the sensor's timer (stopped only)
 //   BLINK <hz>       50% square wave on PIN_BLINK for the sync check's test LED (0 = off)
-//   PNSWAP <0|1>     swap the MIPI lane P/N pairs in the D-PHY (stopped only; board.h)
+//   PNSWAP <0|1>     invert the MIPI lanes' P/N at the sensor's output (stopped only; board.h)
 //
 // Every command gets one reply, "OK <CMD> ..." or "ERR <CMD> <reason>". If the
 // host closes the port, streaming stops and the IR and the test LED go off.
@@ -51,6 +51,7 @@ static const char* TAG = "main";
 static vd55g1_t s_sensor;
 static esp_err_t s_cam_err = ESP_FAIL;
 static char s_uid[13];
+static bool s_lane_swap = MIPI_LANE_PN_SWAP;  // PNSWAP; kept across INIT
 static QueueHandle_t s_cmd_q;
 static uint32_t s_text_seq;
 
@@ -146,7 +147,7 @@ static int reply_info(void)
           (unsigned long)(ok ? vd55g1_frame_period_us(&s_sensor) : 0), s_sensor.again,
           s_sensor.dgain, s_sensor.ae, led_enabled(), syncgen_on(), (unsigned long)trig_hz(),
           s_sensor.extsync, (unsigned long)blink_hz(), s_sensor.streaming, (unsigned long)capture_slots(),
-          (unsigned long)capture_errors(), capture_pn_swap(), (unsigned long)sync_edge_count(),
+          (unsigned long)capture_errors(), s_lane_swap, (unsigned long)sync_edge_count(),
           (unsigned long)sync_overflows());
 }
 
@@ -172,6 +173,7 @@ static esp_err_t open_camera(void)
     capture_deinit();
     esp_err_t err = vd55g1_open(&s_sensor, PIN_I2C_SDA, PIN_I2C_SCL, SENSOR_I2C_ADDR, SENSOR_I2C_HZ,
                                 PIN_XSHUTDOWN, SENSOR_EXT_CLK_HZ, MIPI_LANE_MBPS);
+    vd55g1_set_lane_swap(&s_sensor, s_lane_swap);
     if (err == ESP_OK) err = vd55g1_set_io(&s_sensor, SENSOR_IO_STROBE, VD55G1_IO_STROBE);
     if (err == ESP_OK) err = vd55g1_set_io(&s_sensor, SENSOR_IO_FSYNC_OUT, VD55G1_IO_FSYNC_OUT);
     if (err == ESP_OK) err = vd55g1_set_external_sync(&s_sensor, false);  // free-run until EXTSYNC 1
@@ -222,13 +224,9 @@ static int handle_command(char* cmdline)
     if (!strcmp(cmd, "PNSWAP")) {
         if (!parse_uint(arg, 1, &v)) return reply("ERR PNSWAP expected 0 or 1");
         if (cam_ok() && s_sensor.streaming) return reply("ERR PNSWAP stop first");
-        capture_set_pn_swap(v != 0);
-        if (cam_ok()) {  // otherwise the next INIT picks it up
-            capture_deinit();
-            err = capture_init(s_sensor.w, s_sensor.h, MIPI_LANES, MIPI_LANE_MBPS);
-            if (err) return reply("ERR PNSWAP %s", esp_err_to_name(err));
-        }
-        return reply("OK PNSWAP %d", capture_pn_swap());
+        s_lane_swap = v != 0;
+        vd55g1_set_lane_swap(&s_sensor, s_lane_swap);  // written at the next START
+        return reply("OK PNSWAP %d", s_lane_swap);
     }
 
     // Everything below needs a working sensor.
