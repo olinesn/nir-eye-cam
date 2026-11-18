@@ -57,6 +57,12 @@ To release:
 
 ### Fixed
 
+- `nireyecam-bench` confirmed "FSYNC_OUT timestamp per frame" on a board
+  with FSYNC_OUT not wired: the frames' arrival times are just as steady, and
+  nothing told the two apart. ESP32-P4 frames now carry a flag (bit 1 of the
+  packet flags) when their timestamp is the FSYNC_OUT edge, and the bench
+  reports Inconclusive when no frame has it. Its boot line also says that a
+  cut 2 sensor boots with ST's patch.
 - ESP32-P4 firmware: silicon cut 2 VD55G1s now boot. The first CAM-5G1-160CLR
   modules from ST are cut 2, which the firmware refused because it lacked
   ST's firmware patch. It now writes the patch from ST's STM32 camera

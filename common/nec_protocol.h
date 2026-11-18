@@ -21,6 +21,8 @@
 #define NEC_PKT_TEXT  'T'  // payload: UTF-8 text (command replies, warnings)
 
 #define NEC_FLAG_AE   0x01 // frame: auto exposure was on, exposure field is the last set value
+#define NEC_FLAG_TS_FSYNC 0x02 // ESP32-P4 frame: t_us is the sensor's FSYNC_OUT edge; without it,
+                               // the time the frame finished arriving (FSYNC_OUT not wired)
 
 #define NEC_HEADER_SIZE 32
 

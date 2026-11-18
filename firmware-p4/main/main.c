@@ -117,7 +117,7 @@ static void send_frame(const cap_frame_t* f)
 {
     nec_header_t h;
     header_init(&h, NEC_PKT_FRAME, f->len);
-    h.flags = s_sensor.ae ? NEC_FLAG_AE : 0;
+    h.flags = (s_sensor.ae ? NEC_FLAG_AE : 0) | (f->t_from_fsync ? NEC_FLAG_TS_FSYNC : 0);
     h.seq = f->seq;
     h.t_us = f->t_us;
     h.width = f->width;

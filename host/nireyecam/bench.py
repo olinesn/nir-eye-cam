@@ -53,6 +53,7 @@ PROFILES = {
 }
 VD55G1_MODEL_ID = 0x53354731
 VD55G1_CUT3 = 0x3030
+VD55G1_CUT2 = 0x2020  # boots with ST's firmware patch
 
 # Options of .github/ISSUE_TEMPLATE/bench_test.yml, word for word.
 CONFIRMS = "Confirms what the code / docs assume"
@@ -102,6 +103,7 @@ class StreamResult:
     delivered_fps: float = 0.0
     delivered_mb_s: float = 0.0
     needed_mb_s: float = 0.0
+    fsync_frames: int = 0                    # ESP32-P4: frames stamped from the sensor's FSYNC_OUT
     error: str | None = None
 
 
@@ -180,6 +182,7 @@ def frame_stats(frames: list, r: StreamResult) -> StreamResult:
         return r
     seq = np.array([p.seq for p, _ in frames], dtype=np.int64)
     t = np.array([p.t_us for p, _ in frames], dtype=np.float64)
+    r.fsync_frames = sum(bool(p.flags & protocol.FLAG_TS_FSYNC) for p, _ in frames)
     steps = np.diff(seq)
     ok = steps > 0
     if not ok.any():
@@ -536,7 +539,8 @@ def verdicts(r: BenchReport) -> list[tuple[str, str | None, str]]:
     if p4:
         if info.get("cam_ok"):
             model, rev = info.get("model_id", "?"), info.get("revision", "?")
-            note = "" if _int(rev) == VD55G1_CUT3 else " (not cut 3, which may need ST's patch)"
+            note = {VD55G1_CUT3: "", VD55G1_CUT2: " (cut 2: boots with ST's firmware patch)"}.get(
+                _int(rev), " (an unknown revision)")
             out.append((ITEM_P4_BOOT, CONFIRMS if _int(model) == VD55G1_MODEL_ID else DIFFERS,
                         f"model_id {model}, revision {rev}{note}"))
         else:
@@ -558,8 +562,20 @@ def verdicts(r: BenchReport) -> list[tuple[str, str | None, str]]:
             out.append((ITEM_P4_CSI, CONFIRMS if after == before else DIFFERS,
                         f"csi_errors {before} -> {after} over {len(good)} streaming passes"))
         if default:
-            out.append((ITEM_P4_FSYNC, CONFIRMS if all(map(_timing_ok, default)) else DIFFERS,
-                        "; ".join(map(_timing_text, default))))
+            stamped = sum(s.fsync_frames for s in default)
+            total = sum(s.frames for s in default)
+            if not stamped:
+                # Arrival times are steady too, so the timing check alone
+                # cannot tell them from FSYNC_OUT edges.
+                out.append((ITEM_P4_FSYNC, INCONCLUSIVE,
+                            f"no frame was stamped from FSYNC_OUT ({total} frames used arrival times): "
+                            "wire the sensor's FSYNC_OUT to PIN_FSYNC through the level shifter"))
+            elif stamped < total:
+                out.append((ITEM_P4_FSYNC, DIFFERS, f"only {stamped} of {total} frames were stamped from FSYNC_OUT; "
+                            + "; ".join(map(_timing_text, default))))
+            else:
+                out.append((ITEM_P4_FSYNC, CONFIRMS if all(map(_timing_ok, default)) else DIFFERS,
+                            "; ".join(map(_timing_text, default))))
         out.append((ITEM_P4_USB, None, rates))
         if good:
             out.append((ITEM_P4_DEVICE, CONFIRMS if top > FULL_SPEED_MB_S else INCONCLUSIVE,

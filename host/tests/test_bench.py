@@ -89,7 +89,7 @@ def _p4_report(**kw):
 
 def _stream(res="320x320", mode="default", **kw):
     s = StreamResult(res, mode, frames=100, period_us=10_000, sensor_fps=100, delivered_fps=100,
-                     delivered_mb_s=10.24, needed_mb_s=10.24, expected_period_us=10_000)
+                     delivered_mb_s=10.24, needed_mb_s=10.24, expected_period_us=10_000, fsync_frames=100)
     for k, v in kw.items():
         setattr(s, k, v)
     return s
@@ -114,7 +114,7 @@ def test_verdicts_for_a_good_p4_run():
 def test_verdicts_flag_what_differs():
     r = _p4_report(csi_after=7,
                    info_before={"board": "esp32p4", "cam_ok": 1, "model_id": "0x12345678",
-                                "revision": "0x2020", "csi_errors": 0},
+                                "revision": "0x1010", "csi_errors": 0},
                    streams=[_stream(period_us=10_400, delivered_mb_s=0.9)],  # 4% off INFO's frame period
                    gain=GainResult(codes=[0, 16, 24, 28], expected=[1, 2, 4, 8], means=[20, 30, 40, 50],
                                    clipped=[False] * 4, measured=[1, 1.5, 2, 2.5], worst_error=0.69),
@@ -123,12 +123,31 @@ def test_verdicts_flag_what_differs():
     verdicts = bench.verdicts(r)
     results = {item: res for item, res, _ in verdicts}
     assert results[bench.ITEM_P4_BOOT] == DIFFERS
-    assert "not cut 3" in dict((i, w) for i, _, w in verdicts)[bench.ITEM_P4_BOOT]
+    assert "unknown revision" in dict((i, w) for i, _, w in verdicts)[bench.ITEM_P4_BOOT]
     assert results[bench.ITEM_P4_CSI] == DIFFERS
     assert results[bench.ITEM_P4_FSYNC] == DIFFERS
     assert results[bench.ITEM_P4_DEVICE] == INCONCLUSIVE  # 0.9 MB/s fits full speed too
     assert results[bench.ITEM_P4_EXTSYNC] == DIFFERS
     assert results[bench.OTHER] == DIFFERS
+
+
+def test_cut_2_boots_with_the_patch():
+    r = _p4_report(info_before={"board": "esp32p4", "cam_ok": 1, "model_id": "0x53354731",
+                                "revision": "0x2020", "csi_errors": 0}, streams=[_stream()])
+    verdicts = {item: (res, why) for item, res, why in bench.verdicts(r)}
+    assert verdicts[bench.ITEM_P4_BOOT][0] == CONFIRMS
+    assert "ST's firmware patch" in verdicts[bench.ITEM_P4_BOOT][1]
+
+
+def test_arrival_times_do_not_confirm_fsync():
+    # Steady timestamps alone pass the timing check; without the FSYNC flag
+    # they are the frames' arrival times and say nothing about FSYNC_OUT.
+    r = _p4_report(streams=[_stream(fsync_frames=0)])
+    results = {item: res for item, res, _ in bench.verdicts(r)}
+    assert results[bench.ITEM_P4_FSYNC] == INCONCLUSIVE
+    r = _p4_report(streams=[_stream(fsync_frames=60)])
+    results = {item: res for item, res, _ in bench.verdicts(r)}
+    assert results[bench.ITEM_P4_FSYNC] == DIFFERS
 
 
 class _DeadSensor:

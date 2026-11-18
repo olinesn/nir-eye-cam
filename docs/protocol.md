@@ -16,7 +16,7 @@ Change both together.
 |---|---|---|
 | 0 | 4 bytes | magic `NEC1` |
 | 4 | u8 | type: `F` frame, `S` sync edge, `T` text |
-| 5 | u8 | flags: bit 0 = auto exposure on |
+| 5 | u8 | flags: bit 0 = auto exposure on; bit 1 (ESP32-P4) = `t_us` is the sensor's FSYNC_OUT edge, not the time the frame finished arriving |
 | 6 | u16 | header size (32) |
 | 8 | u32 | payload length |
 | 12 | u32 | seq: frame = VSYNC count since START (gaps = dropped frames); sync = edge count since boot; text = reply count |
