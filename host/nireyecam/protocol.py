@@ -20,6 +20,7 @@ TEXT = ord("T")
 TYPES = (FRAME, SYNC, TEXT)
 
 FLAG_AE = 0x01
+FLAG_TS_FSYNC = 0x02  # ESP32-P4: t_us is the sensor's FSYNC_OUT edge, not the frame's arrival
 
 MAX_FRAME_DIM = 1024  # RP2040 build: up to 320; ESP32-P4/VD55G1 build: up to 804x704
 MAX_FRAME_BYTES = MAX_FRAME_DIM * MAX_FRAME_DIM

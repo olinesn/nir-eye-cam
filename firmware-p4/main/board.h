@@ -31,37 +31,55 @@
 // controlled by the GPIO"). The ESP32-P4X board's connector carries the
 // Raspberry Pi signals numbered from the other end, so that is its pin 5,
 // which Espressif's own camera adapter pulls up to 1.8 V by itself: the main
-// board may not drive it at all, and no board GPIO is known to. VERIFY that
-// it sits high with the P-Board connected (firmware-p4/README.md); if a board
-// GPIO turns out to drive it, put that GPIO here.
+// board may not drive it at all, and no board GPIO is known to. On the
+// P-Board (schematic PCB4280D) this line, NRST, holds XSHUTDOWN low through a
+// diode, and may also switch the module's regulators on (which of its 0 ohm
+// links R4 / R12 is fitted is not checked). VERIFY that it sits high with the
+// P-Board connected (firmware-p4/README.md); if a board GPIO turns out to
+// drive it, put that GPIO here.
 #define PIN_XSHUTDOWN        -1
 
 // Frequency on the sensor's CLKIN (6-27 MHz), from the camera board's own
-// oscillator. ST's Raspberry Pi overlay for its VD55G1 boards declares
-// 12 MHz. The sensor's PLL is computed from this, so VERIFY it on the
-// P-Board (a wrong value gives a wrong MIPI rate, or no boot).
+// oscillator: on the P-Board a 12 MHz oscillator (Y1 in its schematic) wired
+// straight to the module, as ST's Raspberry Pi overlay declares. The sensor's
+// PLL is computed from this (a wrong value gives a wrong MIPI rate, or no
+// boot).
 #define SENSOR_EXT_CLK_HZ    12000000
 
 // MIPI CSI-2: one data lane. 600 Mb/s gives a 150 MHz pixel clock (Linux
 // driver's clock-tree rule), far more than a 320x320 crop needs. (ST's
 // overlay runs the link faster, at 1200 Mb/s; the sensor allows 250-1200.)
-// The ESP32-P4 cannot swap a lane's P and N in software, so a P-Board wired
-// with inverted lane polarity needs a cable that swaps them (ST's overlays
-// set lane-polarities <1 1> for some of its boards on a Raspberry Pi).
 #define MIPI_LANES           1
 #define MIPI_LANE_MBPS       600
+
+// The P-Board's clock and data pairs are wired P/N swapped relative to the
+// Raspberry Pi pinout, which this board's connector shares (its schematic:
+// "For use with RaspberryPi, MIPI Lane P/N shall be swap by SW"; ST's and
+// Raspberry Pi's overlays for it set lane-polarities <1 1> on the sensor).
+// 1 has the sensor invert both lanes at its own output (OIF_CTRL bits 3 and
+// 6), exactly as ST's Linux and STM32 drivers do for that setting.
+// `PNSWAP 0|1` switches it at run time.
+#define MIPI_LANE_PN_SWAP    1
 
 // The ESP32-P4's MIPI PHY is powered from internal LDO channel 3 at 2.5 V,
 // as in ESP-IDF's camera examples for this board.
 #define MIPI_LDO_CHAN        3
 #define MIPI_LDO_MV          2500
 
-// Sensor GPIO roles (inside the sensor; set over I2C). ST's overlay uses
-// sensor GPIO2 as the LED strobe on its boards: VERIFY which sensor GPIOs the
-// P-Board brings out, and swap STROBE and FSYNC_OUT here if only GPIO2 is.
+// Sensor GPIO roles (inside the sensor; set over I2C), fitted to the P-Board's
+// wiring (schematic PCB4280D):
+// - GPIO0 reaches only the camera connector, as CAM_IO1 (Raspberry Pi 15-pin
+//   pin 12, so pin 4 at the ESP32-P4X end, where nothing is known to use it),
+//   through a 1.8 V <-> 3.3 V buffer whose direction is set by GPIO1.
+// - GPIO1 is that buffer's direction pin (high: sensor drives the connector;
+//   low: the connector drives GPIO0) and is brought out nowhere else. It is
+//   left as an input, as ST's own driver leaves it.
+// - GPIO2 is on the P-Board's J3 header (pin 2, beside 1.8 V and GND) and J4:
+//   the strobe pin ST's overlays use.
+// - GPIO3 is on test point TP2 only: solder a wire to it for FSYNC_OUT.
 #define SENSOR_IO_EXTSYNC    0   // only GPIO0 can be EXTERNAL_SYNC (ST UM3224)
-#define SENSOR_IO_STROBE     1   // -> IR LED driver, on during exposure
-#define SENSOR_IO_FSYNC_OUT  2   // -> PIN_FSYNC: frame timestamps
+#define SENSOR_IO_STROBE     2   // -> IR LED driver, on during exposure (P-Board J3 pin 2)
+#define SENSOR_IO_FSYNC_OUT  3   // -> PIN_FSYNC: frame timestamps (P-Board TP2)
 
 // ESP32-P4 pins for sync and illumination, on header J1. ESP-IDF's DVP camera
 // example puts an external camera on these same pins for v3 boards, so the

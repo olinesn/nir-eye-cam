@@ -11,12 +11,18 @@
 
 static const char* TAG = "vd55g1";
 
+// ST's firmware patch for silicon cut 2 (BSD-3-Clause, see st/README.md):
+// patch_array_cut_2 and its expected version.
+#include "st/vd55g1_patch_cut_2.c"
+
 // Register addresses are 16-bit, sent MSB first; multi-byte VALUES are
 // little-endian (the opposite of the Himax sensors).
 #define REG_MODEL_ID              0x0000  // 32
 #define REG_REVISION              0x0004  // 16, silicon cut
 #define REG_SYSTEM_FSM            0x001C  // 8
-#define REG_BOOT                  0x0200  // 8
+#define REG_FWPATCH_REVISION      0x0012  // 16, major << 8 | minor, once patched
+#define REG_BOOT                  0x0200  // 8: 1 = boot, 2 = patch and boot
+#define REG_FWPATCH_START         0x2000  // cut 2's patch is written here
 #define REG_STBY                  0x0201  // 8
 #define REG_STREAMING             0x0202  // 8
 #define REG_EXT_CLOCK             0x0220  // 32, Hz
@@ -24,7 +30,9 @@ static const char* TAG = "vd55g1";
 #define REG_LINE_LENGTH           0x0300  // 16
 #define REG_VT_CTRL               0x0309  // 8, 1 = frames start on GPIO0 (VT slave)
 #define REG_FORMAT_CTRL           0x030A  // 8, bits per pixel
-#define REG_OIF_CTRL              0x030C  // 16, lane polarities
+#define REG_OIF_CTRL              0x030C  // 16, lane polarities: bit 3 clock, bit 6 data
+#define OIF_CLOCK_LANE_SWAP       (1u << 3)
+#define OIF_DATA_LANE_SWAP        (1u << 6)
 #define REG_OIF_IMG_CTRL          0x030F  // 8, CSI-2 data type
 #define REG_EXPOSURE_USE_CASES    0x0312  // 8
 #define REG_ISL_ENABLE            0x0326  // 16
@@ -56,6 +64,7 @@ static const char* TAG = "vd55g1";
 #define MODEL_ID_VD55G1 0x53354731
 #define REVISION_CUT2   0x2020  // needs ST's firmware patch before boot
 #define REVISION_CUT3   0x3030  // boots as is
+#define PATCH_CHUNK     128     // bytes per I2C write, as ST's middleware
 
 #define EXP_MODE_AUTO   0
 #define EXP_MODE_MANUAL 2
@@ -74,6 +83,21 @@ static esp_err_t wr(vd55g1_t* s, uint16_t reg, uint32_t val, int bytes)
     uint8_t b[6] = {reg >> 8, reg & 0xff};
     for (int i = 0; i < bytes; i++) b[2 + i] = (val >> (8 * i)) & 0xff;  // little-endian value
     return i2c_master_transmit(s->dev, b, 2 + bytes, 50);
+}
+
+// A run of bytes from reg upwards (the sensor auto-increments the address).
+static esp_err_t wr_array(vd55g1_t* s, uint16_t reg, const uint8_t* data, size_t len)
+{
+    uint8_t b[2 + PATCH_CHUNK];
+    while (len) {
+        size_t n = len < PATCH_CHUNK ? len : PATCH_CHUNK;
+        b[0] = reg >> 8;
+        b[1] = reg & 0xff;
+        memcpy(b + 2, data, n);
+        ESP_RETURN_ON_ERROR(i2c_master_transmit(s->dev, b, 2 + n, 50), TAG, "write 0x%04x", reg);
+        reg += n, data += n, len -= n;
+    }
+    return ESP_OK;
 }
 
 static esp_err_t rd(vd55g1_t* s, uint16_t reg, uint32_t* val, int bytes)
@@ -162,34 +186,63 @@ esp_err_t vd55g1_open(vd55g1_t* s, int sda, int scl, uint8_t addr, uint32_t i2c_
     }
     vTaskDelay(pdMS_TO_TICKS(10));
 
-    ESP_RETURN_ON_ERROR(poll(s, REG_SYSTEM_FSM, FSM_READY_TO_BOOT, 500), TAG, "sensor not ready to boot (I2C/power/clock?)");
+    // With nothing driving XSHUTDOWN (ST's P-Board), the sensor keeps its
+    // power and state through an ESP32-P4 reset or reflash, so it may already
+    // be booted, or even streaming. Bring it back to standby and skip the boot.
+    uint32_t fsm = 0;
+    ESP_RETURN_ON_ERROR(rd(s, REG_SYSTEM_FSM, &fsm, 1), TAG, "sensor not answering (I2C/power/clock?)");
+    if (fsm == FSM_STREAMING) {
+        ESP_RETURN_ON_ERROR(wr(s, REG_STREAMING, 1, 1), TAG, "stop");
+        ESP_RETURN_ON_ERROR(poll(s, REG_STREAMING, 0, 500), TAG, "stop ack");
+        ESP_RETURN_ON_ERROR(poll(s, REG_SYSTEM_FSM, FSM_SW_STBY, 500), TAG, "standby");
+        fsm = FSM_SW_STBY;
+    }
+    bool booted = fsm == FSM_SW_STBY;
+    if (!booted)
+        ESP_RETURN_ON_ERROR(poll(s, REG_SYSTEM_FSM, FSM_READY_TO_BOOT, 500), TAG,
+                            "sensor not ready to boot (I2C/power/clock?)");
     ESP_RETURN_ON_ERROR(rd(s, REG_MODEL_ID, &s->model_id, 4), TAG, "model id");
     uint32_t rev = 0;
     ESP_RETURN_ON_ERROR(rd(s, REG_REVISION, &rev, 2), TAG, "revision");
     s->revision = (uint16_t)rev;
     ESP_LOGI(TAG, "model id 0x%08lx, revision 0x%04x", (unsigned long)s->model_id, (unsigned)s->revision);
 
-    ESP_RETURN_ON_ERROR(wr(s, REG_EXT_CLOCK, ext_clk_hz, 4), TAG, "ext clock");
-
     if (s->model_id != MODEL_ID_VD55G1) {
         ESP_LOGE(TAG, "not a VD55G1");
         return ESP_ERR_NOT_FOUND;
     }
-    if (s->revision == REVISION_CUT2) {
-        // Cut 2 needs ST's firmware patch written at 0x2000 and then BOOT = 2.
-        // The blob is not included; ST publishes it in its STM32 camera
-        // middleware and its Linux drivers.
-        ESP_LOGE(TAG, "cut 2 sensor: needs ST firmware patch, not included");
-        return ESP_ERR_NOT_SUPPORTED;
-    }
-    if (s->revision != REVISION_CUT3) {
+    if (!booted) ESP_RETURN_ON_ERROR(wr(s, REG_EXT_CLOCK, ext_clk_hz, 4), TAG, "ext clock");
+
+    if (booted) {
+        // Booted by an earlier run, with the patch if it needed one.
+        ESP_LOGI(TAG, "already booted (the sensor kept power through the reset)");
+    } else if (s->revision == REVISION_CUT2) {
+        // Cut 2 boots only with ST's firmware patch: write it at 0x2000, then
+        // BOOT = 2, and check the version it reports, as ST's STM32
+        // middleware and the Linux driver do.
+        ESP_RETURN_ON_ERROR(wr_array(s, REG_FWPATCH_START, patch_array_cut_2, sizeof(patch_array_cut_2)), TAG,
+                            "write patch");
+        ESP_RETURN_ON_ERROR(wr(s, REG_BOOT, 2, 1), TAG, "patch and boot");
+        ESP_RETURN_ON_ERROR(poll(s, REG_BOOT, 0, 500), TAG, "patch ack");
+        uint32_t patch = 0;
+        const uint32_t want = (VD55G1_FWPATCH_REVISION_MAJOR_CUT_2 << 8) | VD55G1_FWPATCH_REVISION_MINOR_CUT_2;
+        ESP_RETURN_ON_ERROR(rd(s, REG_FWPATCH_REVISION, &patch, 2), TAG, "patch version");
+        if (patch != want) {
+            ESP_LOGE(TAG, "patch version %lu.%lu, expected %lu.%lu", (unsigned long)(patch >> 8),
+                     (unsigned long)(patch & 0xff), (unsigned long)(want >> 8), (unsigned long)(want & 0xff));
+            return ESP_ERR_INVALID_RESPONSE;
+        }
+        ESP_LOGI(TAG, "cut 2: ST firmware patch %lu.%lu applied", (unsigned long)(patch >> 8),
+                 (unsigned long)(patch & 0xff));
+    } else if (s->revision == REVISION_CUT3) {
+        // Cut 3 boots without the patch, in ST's STM32 middleware and in the
+        // Linux driver alike.
+        ESP_RETURN_ON_ERROR(wr(s, REG_BOOT, 1, 1), TAG, "boot");
+        ESP_RETURN_ON_ERROR(poll(s, REG_BOOT, 0, 500), TAG, "boot ack");
+    } else {
         ESP_LOGE(TAG, "unknown VD55G1 revision");
         return ESP_ERR_NOT_SUPPORTED;
     }
-    // Cut 3 boots without the patch, as in ST's STM32 middleware. VERIFY: the
-    // mainline Linux driver patches every VD55G1, whatever its cut.
-    ESP_RETURN_ON_ERROR(wr(s, REG_BOOT, 1, 1), TAG, "boot");
-    ESP_RETURN_ON_ERROR(poll(s, REG_BOOT, 0, 500), TAG, "boot ack");
     ESP_RETURN_ON_ERROR(poll(s, REG_SYSTEM_FSM, FSM_SW_STBY, 500), TAG, "standby");
 
     // Single exposure context, no HDR, defect correction on.
@@ -290,7 +343,7 @@ esp_err_t vd55g1_start(vd55g1_t* s)
 {
     if (s->streaming) return ESP_OK;
     ESP_RETURN_ON_ERROR(wr(s, REG_MIPI_DATA_RATE, s->mipi_bps, 4), TAG, "mipi rate");
-    wr(s, REG_OIF_CTRL, 0, 2);  // no lane polarity swap
+    wr(s, REG_OIF_CTRL, s->lane_swap ? OIF_CLOCK_LANE_SWAP | OIF_DATA_LANE_SWAP : 0, 2);
     wr(s, REG_ISL_ENABLE, 0, 2);
     // Re-apply the manual exposure state in case AE moved it.
     vd55g1_set_ae(s, s->ae);
@@ -305,6 +358,8 @@ esp_err_t vd55g1_start(vd55g1_t* s)
     s->streaming = true;
     return ESP_OK;
 }
+
+void vd55g1_set_lane_swap(vd55g1_t* s, bool on) { s->lane_swap = on; }
 
 esp_err_t vd55g1_stop(vd55g1_t* s)
 {

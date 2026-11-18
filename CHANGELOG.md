@@ -57,6 +57,42 @@ To release:
 
 ### Fixed
 
+- `nireyecam-bench` confirmed "FSYNC_OUT timestamp per frame" on a board
+  with FSYNC_OUT not wired: the frames' arrival times are just as steady, and
+  nothing told the two apart. ESP32-P4 frames now carry a flag (bit 1 of the
+  packet flags) when their timestamp is the FSYNC_OUT edge, and the bench
+  reports Inconclusive when no frame has it. Its boot line also says that a
+  cut 2 sensor boots with ST's patch.
+- ESP32-P4 firmware: silicon cut 2 VD55G1s now boot. The first CAM-5G1-160CLR
+  modules from ST are cut 2, which the firmware refused because it lacked
+  ST's firmware patch. It now writes the patch from ST's STM32 camera
+  middleware (version 2.2, BSD-3-Clause, kept unchanged with its license in
+  `firmware-p4/main/st/`) and checks the version the sensor reports.
+- ESP32-P4 firmware: with no camera attached (or one that failed to open),
+  the streaming task spun without ever waiting once a host opened the port.
+  It starved the USB link, so commands such as `INIT` and `INFO` never
+  arrived, and the task watchdog fired every 5 s. It now waits as it does
+  with a camera. Found on the first real board.
+- ESP32-P4 firmware: the ISP was enabled although it is bypassed, which
+  ESP-IDF refuses, so the camera never opened. A bypassed ISP is now only
+  created. Found on the first real board.
+- ESP32-P4 firmware: on a board that does not drive the sensor's reset line
+  (ST's P-Board), the sensor stays booted through an ESP32-P4 reset or
+  reflash, and the firmware then gave up waiting for it to be ready to boot.
+  It now takes a sensor that is already booted (or streaming) back to
+  standby and carries on. Found on the first real board.
+- ESP32-P4 firmware and docs fitted to ST's P-Board as its schematic
+  (PCB4280D) shows it. Its clock and data pairs are wired P/N swapped, so
+  the firmware now has the sensor invert both lanes at its own output
+  (`OIF_CTRL`), as ST's drivers do; on by default, with a new `PNSWAP 0|1`
+  command and `pn_swap` in `INFO`. Checked on the first board: no frames
+  with it off, frames with no CSI errors with it on. The sensor's
+  STROBE moves from GPIO1 to GPIO2 (header J3) and FSYNC_OUT from GPIO2 to
+  GPIO3 (test point TP2): on this board GPIO1 sets the direction of the
+  buffer on GPIO0 and is brought out nowhere, so strobing it would have
+  flipped that buffer every frame. GPIO0 reaches only the camera connector,
+  so the wiring no longer runs TRIG through the level shifter; how EXTSYNC
+  reaches it is still open.
 - ESP32-P4 firmware: `TRIG` ran off the RC oscillator below ~38 Hz (an
   inaccurate frame rate, and no output at all below ~17 Hz), because the LEDC
   driver picked the clock source from the frequency. It now runs off the

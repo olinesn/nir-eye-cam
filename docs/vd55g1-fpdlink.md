@@ -171,13 +171,16 @@ locally. No sync wire crosses the joint.
 1. **Sensor on the link:** the CAM-5G1 on its P-Board, CSI-2 into the 953
    board (pinout and lane polarity checked), the 934's parallel output into an
    ESP32-P4 dev board's DVP pins. RAW10 frames, then RAW8 NEC1 packets into
-   `nireyecam-record`. **Clock catch:** the P-Board clocks the sensor from its
-   own oscillator (12 MHz in ST's overlay, `firmware-p4/main/board.h`), but in
-   DVP mode the sensor must run from the 953's clock, directly or through the
-   953's CLK_OUT, or "a variation or drift in CSI-2 data could cause buffer
-   overflows" (SNLA270 §6). **VERIFY** whether the P-Board's CLKIN can be fed
-   from the 953 board; if not, this step waits for the head board, or runs
-   only as a short, drift-tolerant check.
+   `nireyecam-record`. **Clock catch:** the P-Board clocks the sensor from
+   its own fixed 12 MHz oscillator, wired straight to the module with no
+   clock input (its schematic, PCB4280D: Y1), but in DVP mode the sensor
+   must run from the 953's clock, directly or through the 953's CLK_OUT, or
+   "a variation or drift in CSI-2 data could cause buffer overflows"
+   (SNLA270 §6). So on the P-Board this step needs Y1 removed and the 953's
+   clock wired to its output pad; otherwise it waits for the head board, or
+   runs only as a short, drift-tolerant check. The P-Board's pairs are also
+   wired P/N swapped relative to the Raspberry Pi pinout: check what the 953
+   board expects.
 2. **Sync:** time-aligned first, then the back-channel trigger to GPIO0 with
    two heads on one trigger line; measure the exposure skew with a
    fast-blinking LED.

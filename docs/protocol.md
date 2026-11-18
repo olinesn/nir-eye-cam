@@ -16,7 +16,7 @@ Change both together.
 |---|---|---|
 | 0 | 4 bytes | magic `NEC1` |
 | 4 | u8 | type: `F` frame, `S` sync edge, `T` text |
-| 5 | u8 | flags: bit 0 = auto exposure on |
+| 5 | u8 | flags: bit 0 = auto exposure on; bit 1 (ESP32-P4) = `t_us` is the sensor's FSYNC_OUT edge, not the time the frame finished arriving |
 | 6 | u16 | header size (32) |
 | 8 | u32 | payload length |
 | 12 | u32 | seq: frame = VSYNC count since START (gaps = dropped frames); sync = edge count since boot; text = reply count |
@@ -66,9 +66,11 @@ Same packets and the same commands, with these differences
 | `TRIG <hz>` | new: frame-trigger square wave on TRIG_OUT (0 = off) |
 | `EXTSYNC <0\|1>` | new: start each frame on a pulse at the sensor's GPIO0 instead of its own timer (stopped only) |
 | `BLINK <hz>` | new: 50% square wave on BLINK (GPIO33) for the two-camera sync check's test LED, 0–10000 Hz (0 = off) |
+| `PNSWAP <0\|1>` | new: have the sensor invert its MIPI lanes' P/N (stopped only; applied at the next `START`); 1 by default, for ST's P-Board, whose pairs are wired swapped |
 
 `INFO` adds `sensor`, `model_id`, `revision`, `x`, `y`, `line_time_ns`,
-`frame_period_us`, `dgain`, `trig_hz`, `extsync`, `blink_hz` and `csi_errors`.
+`frame_period_us`, `dgain`, `trig_hz`, `extsync`, `blink_hz`, `csi_errors` and
+`pn_swap`.
 
 `TRIG` and `BLINK` run off the board's 40 MHz crystal at every frequency, so
 their rates are as accurate as the crystal. Closing the port turns `BLINK` off; `TRIG`

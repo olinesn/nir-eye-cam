@@ -46,7 +46,7 @@ a trigger, on top of providing the timeline.
 | ST **CAM-5G1-080NIR** promodule | VD55G1, 804×704 mono global shutter, 2.16 µm. 80° DFOV, EFL 1.32 mm, F/2.0, **940 nm bandpass filter built in**. Head 5.0 × 5.0 × 2.55 mm; 11.65 × 8.0 mm including the connector. |
 | or **CAM-5G1-081CLR** | Same optics with a clear filter. Use it for 850 nm illumination and add an 830 nm long-pass filter. |
 | (bring-up only) **CAM-5G1-160CLR** | Same sensor and connector, 160° DFOV fisheye (EFL 0.825 mm, < −76% TV distortion). Fine for bring-up; too wide and too distorted for the eye. |
-| ST **STEVAL-CAM-M0I** "P-Board" (prototype; order code STEVAL-CAM-M0I1) | 30-pin promodule → 22-pin FFC, MIPI 1–2 lanes + I2C, 30 × 35 × 11 mm, 10 cm cable. The 22-pin output uses the Raspberry Pi 5 pinout, so a Raspberry Pi 5 camera cable (22-pin → 15-pin) connects it to the ESP32-P4X board, whose connector carries the Raspberry Pi 15-pin signals. Its sensor reset comes from the connector's CAM_IO0, which must be high: see [`firmware-p4/README.md`](../firmware-p4/README.md). **VERIFY** lane polarity: ST warned that another of its boards (STEVAL-56G3MAI) has lane polarity that does not match the Raspberry Pi pinout and could damage boards. |
+| ST **STEVAL-CAM-M0I** "P-Board" (prototype; order code STEVAL-CAM-M0I1) | 30-pin promodule → 22-pin FFC, MIPI 1–2 lanes + I2C, 30 × 35 × 11 mm, 10 cm cable. The 22-pin output uses the Raspberry Pi 5 pinout, so a Raspberry Pi 5 camera cable (22-pin → 15-pin) connects it to the ESP32-P4X board, whose connector carries the Raspberry Pi 15-pin signals. Its sensor reset comes from the connector's CAM_IO0, which must be high: see [`firmware-p4/README.md`](../firmware-p4/README.md). Its schematic (PCB4280D, on ST's product page) shows the clock and data pairs wired P/N swapped relative to the Raspberry Pi pinout, a fixed 12 MHz oscillator, and which sensor GPIOs it brings out; the firmware has the sensor invert both lanes at its output, as ST's drivers do (checked on hardware), and uses the pins the board exposes ([`firmware-p4/README.md`](../firmware-p4/README.md), Before first power-up). |
 | ESP32-P4 board (prototype) | Espressif **ESP32-P4X-Function-EV-Board**: chip revision v3.1+ (what the firmware builds for), a Type-C port wired to USB 2.0 high speed as a device, a 15-pin 1.0 mm MIPI CSI connector, 40-pin header. Pin map in [`firmware-p4/README.md`](../firmware-p4/README.md). Not the older ESP32-P4-Function-EV-Board (v1.x silicon), and not the Waveshare ESP32-P4-NANO, whose high-speed port is a Type-A host-style socket. |
 | Final: custom carrier | ESP32-P4 module + matching BM28 receptacle (likely the `BM28B0.6-30DS/2-0.35V` part; check) + 3 LDOs + 24 MHz oscillator + 1.8 V level shifters + LED driver + USB-C. Only the 5 mm module and lens need to sit at the eye; the carrier can be centimetres away on a flex: options in [vd55g1-flex.md](vd55g1-flex.md). |
 | Close-up lens | Small plano-convex, ~6 mm diameter, f = 10–20 mm, in a 3D-printed cap over the module. |
@@ -105,6 +105,10 @@ Plan:
    and motion is frozen by the pulse.
 4. GPIO2 = FSYNC_OUT goes to an ESP32-P4 interrupt, which timestamps every
    frame (the VSYNC role in the RP2040 build).
+
+On the P-Board prototype the roles shift to the pins that board brings out:
+STROBE on GPIO2 and FSYNC_OUT on GPIO3, with GPIO1 left alone because it sets
+the direction of the board's buffer on GPIO0 (`firmware-p4/main/board.h`).
 5. The ESP32-P4 also timestamps the SYNC edges, so `nireyecam-align` works
    unchanged and flags any camera that missed a trigger.
 
@@ -126,12 +130,12 @@ LED enable are both high, so the IR is off unless the host asked for it.
 The picture shows where each part goes; the schematic below gives the pins.
 
 ```
- P-Board (1.8 V)                 TXB0104 breakout          ESP32-P4X (header J1)
- sensor GPIO2  FSYNC_OUT ─────── A1      B1 ────────────── GPIO20 (J1-13)  FSYNC in
- sensor GPIO0  EXTSYNC   ─────── A2      B2 ────────────── GPIO23 (J1-7)   TRIG out
- sensor GPIO1  STROBE    ─────── A3      B3 ────────────── 74HCT08 pin 1A  (STROBE, 3.3 V)
- 1.8 V I/O rail          ─────── VA      VB ────────────── 3V3   (J1-1)
- GND                     ─────── GND    GND ────────────── GND   (J1-6)
+ P-Board (1.8 V)                       TXB0104 breakout       ESP32-P4X (header J1)
+ sensor GPIO3  FSYNC_OUT  (TP2) ────── A1      B1 ─────────── GPIO20 (J1-13)  FSYNC in
+ sensor GPIO2  STROBE     (J3-2) ───── A3      B3 ─────────── 74HCT08 pin 1A  (STROBE, 3.3 V)
+ 1.8 V I/O rail           (J3-1) ───── VA      VB ─────────── 3V3   (J1-1)
+ GND                      (J3-3) ───── GND    GND ─────────── GND   (J1-6)
+ sensor GPIO0  EXTSYNC:   not on a P-Board pin (below) ...... GPIO23 (J1-7)   TRIG out
 
  74HCT08 (VCC from 5V, J1-2; GND; 0.1 µF across them)
    1A  ── B3 of the TXB0104 (STROBE)
@@ -153,7 +157,7 @@ The picture shows where each part goes; the schematic below gives the pins.
 | 220 Ω, and two 100 kΩ resistors | 1 + 2 | Gate resistor (see the rules); pull-downs on the gate and on LED enable, which keep the IR off while anything is unpowered or booting (GPIO32 floats until the firmware drives it). |
 | Vishay TSAL6400, 940 nm IR LED (±25°, ~1.35 V) | 2, plus spares | For the CAM-5G1-080NIR (940 nm bandpass). With the clear module, an 850 nm LED and an 830 nm long-pass filter instead. |
 | LED series resistor | 1 | R = (5 V − LEDs × 1.35 V) / current. Two LEDs: 120 Ω for 20 mA, 47 Ω for 50 mA. |
-| 1.8 V for the shifter's A side | | From the P-Board's 1.8 V I/O rail, so the levels match the sensor's. **VERIFY** the P-Board brings it out; if not, a small 3.3 V → 1.8 V regulator. |
+| 1.8 V for the shifter's A side | | From the P-Board's 1.8 V I/O rail, so the levels match the sensor's: pin 1 of its header J3 (through 10 Ω, plenty for the shifter's few µA). |
 
 Rules:
 - **Start at 20 mA, and measure before raising it.** Aim for well under
@@ -178,10 +182,14 @@ Rules:
   and a ground wire joins the boards. The other board's GPIO23 stays
   unconnected. The sync check's test LED hangs off the driving board's GPIO33
   through 330 Ω (README, "Check that two cameras expose together").
-- **VERIFY when the P-Board arrives:** which sensor GPIOs and which 1.8 V
-  point it brings out. ST's Raspberry Pi overlay drives the strobe from
-  sensor GPIO2; if only GPIO2 is available, swap the STROBE and FSYNC_OUT
-  roles in `firmware-p4/main/board.h`.
+- **What the P-Board brings out** (its schematic): header J3 has 1.8 V,
+  sensor GPIO2 and GND on 2.54 mm pins, so STROBE comes from there. Sensor
+  GPIO3 is only on test point TP2, so FSYNC_OUT needs a wire soldered to it.
+  Sensor GPIO0 reaches only the camera connector, at 3.3 V through a one-bit
+  buffer whose direction is sensor GPIO1, so the TXB0104's A2 channel has
+  nothing to connect to. **Open:** where that connector pin lands on the
+  ESP32-P4X (its pin 4) and how to hold the buffer's direction for an input.
+  Until then the cameras free-run and are aligned by timestamps.
 
 ## Firmware (ESP-IDF)
 
@@ -194,12 +202,14 @@ Rules:
   - crop: X start/width `0x0514`/`0x0516`, Y start/height `0x0510`/`0x0512`;
   - manual exposure `0x0502`, analog gain `0x0501`.
 
-  **Cut-2 silicon needs a firmware patch blob** written to `0x2000` before
-  boot; cut 3 does not, in ST's STM32 camera middleware. **VERIFY**: the
-  mainline Linux driver patches every VD55G1. Both cuts report model ID
-  `0x53354731`; the cut is in `0x0004` (`0x2020` = cut 2, `0x3030` = cut 3).
-  The Linux driver carries the blob but is GPL-2.0. ST's STM32 camera
-  middleware carries it too, so check its license as a source instead.
+  **Cut-2 silicon needs a firmware patch** written to `0x2000` before boot
+  (`BOOT` = 2); cut 3 does not, in ST's STM32 camera middleware and in the
+  mainline Linux driver alike. Both cuts report model ID `0x53354731`; the
+  cut is in `0x0004` (`0x2020` = cut 2, `0x3030` = cut 3). The firmware
+  includes the middleware's patch (BSD-3-Clause, version 2.2) in
+  `firmware-p4/main/st/`; the Linux driver's newer one (2.9) is GPL-2.0 and
+  is not used. The first CAM-5G1-160CLR modules (bought from ST in October
+  2026) are cut 2.
 - **Capture:** `esp_cam_ctlr_csi` with `data_lane_num = 1`,
   `input_data_color_type = CAM_CTLR_COLOR_RAW8`. **VERIFY** that the CSI path
   can hand RAW8 to memory unconverted: Espressif's example converts RAW8 →

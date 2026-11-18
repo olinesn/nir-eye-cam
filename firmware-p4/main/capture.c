@@ -13,6 +13,7 @@
 #include "sdkconfig.h"
 #include "esp_timer.h"
 #include "freertos/queue.h"
+#include "freertos/task.h"
 
 #include "board.h"
 
@@ -171,8 +172,10 @@ esp_err_t capture_init(uint16_t w, uint16_t h, int lanes, int lane_mbps)
         .v_res = h,
         .flags.bypass_isp = 1,
     };
+    // A bypassed ISP is never enabled: ESP-IDF refuses esp_isp_enable() on
+    // one ("processor is configured to be bypassed"), and the CSI bridge
+    // passes the data straight through once the processor exists.
     ESP_RETURN_ON_ERROR(esp_isp_new_processor(&isp, &s_isp), TAG, "ISP");
-    ESP_RETURN_ON_ERROR(esp_isp_enable(s_isp), TAG, "ISP enable");
 
     ESP_LOGI(TAG, "%ux%u RAW8, %lu slots of %lu B", w, h, (unsigned long)s_nslots, (unsigned long)s_slot_bytes);
     return ESP_OK;
@@ -182,8 +185,7 @@ esp_err_t capture_deinit(void)
 {
     if (!s_cam) return ESP_OK;
     capture_stop();
-    esp_isp_disable(s_isp);
-    esp_isp_del_processor(s_isp);
+    esp_isp_del_processor(s_isp);  // never enabled (bypassed), so no disable
     s_isp = NULL;
     esp_cam_ctlr_disable(s_cam);
     esp_cam_ctlr_del(s_cam);
@@ -224,7 +226,13 @@ esp_err_t capture_stop(void)
 bool capture_take(cap_frame_t* out, int* slot, TickType_t wait)
 {
     filled_t item;
-    if (!s_filled || xQueueReceive(s_filled, &item, wait) != pdTRUE) return false;
+    if (!s_filled) {
+        // No capture (the camera did not open): still wait, or the streaming
+        // task spins at top priority and starves USB, so commands never arrive.
+        vTaskDelay(wait ? wait : 1);
+        return false;
+    }
+    if (xQueueReceive(s_filled, &item, wait) != pdTRUE) return false;
     *out = item.f;
     *slot = item.slot;
     return true;
