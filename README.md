@@ -96,10 +96,9 @@ flowchart LR
     module -- "30-pin promodule connector" --> pboard
     pboard -- "22-pin FFC" --> cable
     cable -- "15-pin camera connector: MIPI CSI-2, 1 lane<br/>pin 5 (Pi pin 11, CAM_IO0) → sensor reset: must be high<br/>I2C: SDA GPIO7 (J1-3), SCL GPIO8 (J1-5)" --> board
-    pboard -- "FSYNC_OUT, sensor GPIO2<br/>STROBE, sensor GPIO1<br/>1.8 V I/O rail → VA" --> shift
+    pboard -- "FSYNC_OUT, sensor GPIO3 (TP2)<br/>STROBE, sensor GPIO2 (J3 pin 2)<br/>1.8 V I/O rail (J3 pin 1) → VA" --> shift
     shift -- "FSYNC → GPIO20 (J1-13)" --> board
-    board -- "GPIO23 (J1-7) → TRIG<br/>3V3 → VB, GND" --> shift
-    shift -- "EXTSYNC, sensor GPIO0" --> pboard
+    board -- "3V3 → VB, GND" --> shift
     shift -- "STROBE (3.3 V) → 74HCT08" --> driver
     board -- "GPIO32 (J1-26) → LED enable (74HCT08)<br/>5 V, GND" --> driver
     driver -- "MOSFET drain ← LED cathodes; LEDs from 5 V" --> leds
@@ -114,7 +113,7 @@ flowchart LR
 | **ST STEVAL-CAM-M0I P-Board (order code STEVAL-CAM-M0I1)** | 30-pin promodule input, 22-pin FFC output, its own 12 MHz clock for the sensor. |
 | **Raspberry Pi 5 camera cable, 22-pin (0.5 mm) → 15-pin (1.0 mm)** | The P-Board's output uses the Raspberry Pi 5 pinout; the board's connector carries the Raspberry Pi 15-pin signals. Lane polarity is still to check: the ESP32-P4 cannot swap a lane's P and N. |
 | **Espressif ESP32-P4X-Function-EV-Board** | Chip revision v3.1+ (what the firmware builds for). Firmware `nir-eye-cam-…-esp32p4.zip`. |
-| **TXB0104 level-shifter breakout (Adafruit 1875 or SparkFun BOB-11771)** | 1.8 V side from the P-Board's I/O rail, 3.3 V side from the board. Three of its four channels: FSYNC, TRIG and STROBE. |
+| **TXB0104 level-shifter breakout (Adafruit 1875 or SparkFun BOB-11771)** | 1.8 V side from the P-Board's I/O rail, 3.3 V side from the board. Two of its four channels: FSYNC and STROBE (the P-Board has no 1.8 V pin for the sensor's EXTSYNC input). |
 | **IR LED driver: 74HCT08 AND gate + IRLB3813PBF MOSFET** | Lights the LEDs only while the sensor's STROBE and the board's LED enable are both high. 74HCT08 on 5 V; 220 Ω gate resistor; 100 kΩ pull-downs on the gate and on LED enable keep the IR off at power-up. Schematic in docs/vd55g1-esp32p4.md. |
 | **2 × Vishay TSAL6400 940 nm IR LEDs + series resistor** | From 5 V: 120 Ω for 20 mA, 47 Ω for 50 mA. Start at 20 mA and measure at the eye. With the clear module: 850 nm LEDs and an 830 nm long-pass filter. |
 | **Sync line** | The rig's TTL, or the master's SYNC_OUT; also every camera's trigger in exposure-locked mode. |
@@ -293,8 +292,10 @@ On the ESP32-P4 build, `nireyecam-record --trigger HZ` starts every camera's
 frames on one trigger, and `nireyecam-synctest` checks that the exposures
 really line up, by filming one blinking LED. One ESP32-P4X board per camera;
 camera `a` drives the trigger and the LED. Wire:
-- `a`'s TRIG out (GPIO23, J1-7) to the TRIG channel of **both** cameras'
-  level shifters, so it reaches both sensors' GPIO0. Leave `b`'s GPIO23 open.
+- `a`'s TRIG out (GPIO23, J1-7) to **both** sensors' GPIO0. Leave `b`'s
+  GPIO23 open. On ST's P-Board, GPIO0 is reachable only through the camera
+  connector, and that path is still open ([firmware-p4/README.md](firmware-p4/README.md));
+  until it is settled, the cameras free-run and are aligned by timestamps.
 - `a`'s SYNC out (GPIO22, J1-12) to SYNC in (GPIO21, J1-11) on both boards.
 - A ground wire between the two boards.
 - The test LED: `a`'s GPIO33 (J1-29) → 330 Ω → LED → GND, where both cameras

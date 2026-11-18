@@ -17,6 +17,7 @@
 //   TRIG <hz>        frame trigger on TRIG_OUT for every sensor's GPIO0 (0 = off)
 //   EXTSYNC <0|1>    start each frame on a GPIO0 pulse, not the sensor's timer (stopped only)
 //   BLINK <hz>       50% square wave on PIN_BLINK for the sync check's test LED (0 = off)
+//   PNSWAP <0|1>     swap the MIPI lane P/N pairs in the D-PHY (stopped only; board.h)
 //
 // Every command gets one reply, "OK <CMD> ..." or "ERR <CMD> <reason>". If the
 // host closes the port, streaming stops and the IR and the test LED go off.
@@ -137,7 +138,7 @@ static int reply_info(void)
           "\"width\":%u,\"height\":%u,\"x\":%u,\"y\":%u,\"exposure\":%u,\"frame_length\":%u,"
           "\"line_time_ns\":%lu,\"frame_period_us\":%lu,\"again\":%u,\"dgain\":%u,\"ae\":%d,"
           "\"led\":%d,\"syncgen\":%d,\"trig_hz\":%lu,\"extsync\":%d,\"blink_hz\":%lu,\"streaming\":%d,"
-          "\"slots\":%lu,\"csi_errors\":%lu,\"sync_edges\":%lu,\"sync_overflows\":%lu}",
+          "\"slots\":%lu,\"csi_errors\":%lu,\"pn_swap\":%d,\"sync_edges\":%lu,\"sync_overflows\":%lu}",
           FW_VERSION, NEC_BOARD_NAME, s_uid, (unsigned long)s_sensor.model_id, (unsigned)s_sensor.revision, ok,
           ok ? "" : esp_err_to_name(s_cam_err), s_sensor.w, s_sensor.h, s_sensor.x, s_sensor.y,
           s_sensor.exposure, s_sensor.frame_length,
@@ -145,7 +146,7 @@ static int reply_info(void)
           (unsigned long)(ok ? vd55g1_frame_period_us(&s_sensor) : 0), s_sensor.again,
           s_sensor.dgain, s_sensor.ae, led_enabled(), syncgen_on(), (unsigned long)trig_hz(),
           s_sensor.extsync, (unsigned long)blink_hz(), s_sensor.streaming, (unsigned long)capture_slots(),
-          (unsigned long)capture_errors(), (unsigned long)sync_edge_count(),
+          (unsigned long)capture_errors(), capture_pn_swap(), (unsigned long)sync_edge_count(),
           (unsigned long)sync_overflows());
 }
 
@@ -216,6 +217,18 @@ static int handle_command(char* cmdline)
         if (cam_ok() && s_sensor.streaming) return reply("ERR INIT stop first");
         s_cam_err = open_camera();
         return cam_ok() ? reply("OK INIT") : reply("ERR INIT %s", esp_err_to_name(s_cam_err));
+    }
+
+    if (!strcmp(cmd, "PNSWAP")) {
+        if (!parse_uint(arg, 1, &v)) return reply("ERR PNSWAP expected 0 or 1");
+        if (cam_ok() && s_sensor.streaming) return reply("ERR PNSWAP stop first");
+        capture_set_pn_swap(v != 0);
+        if (cam_ok()) {  // otherwise the next INIT picks it up
+            capture_deinit();
+            err = capture_init(s_sensor.w, s_sensor.h, MIPI_LANES, MIPI_LANE_MBPS);
+            if (err) return reply("ERR PNSWAP %s", esp_err_to_name(err));
+        }
+        return reply("OK PNSWAP %d", capture_pn_swap());
     }
 
     // Everything below needs a working sensor.

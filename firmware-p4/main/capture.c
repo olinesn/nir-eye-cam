@@ -10,9 +10,13 @@
 #include "esp_heap_caps.h"
 #include "esp_ldo_regulator.h"
 #include "esp_log.h"
+#include "esp_rom_sys.h"
 #include "sdkconfig.h"
 #include "esp_timer.h"
 #include "freertos/queue.h"
+#include "hal/mipi_csi_host_ll.h"
+#include "hal/mipi_csi_periph.h"
+#include "hal/mipi_csi_phy_ll.h"
 
 #include "board.h"
 
@@ -42,6 +46,7 @@ static QueueHandle_t s_filled;  // filled_t
 static volatile uint32_t s_seq, s_errors, s_fsync_count;
 static volatile int64_t s_fsync_t;
 static volatile uint32_t s_fsync_at_arm[MAX_SLOTS];
+static bool s_pn_swap = MIPI_LANE_PN_SWAP;
 
 // Runs inside the ISR callbacks, so it must be in IRAM too.
 static int IRAM_ATTR slot_of(const void* buf)
@@ -102,6 +107,63 @@ static bool IRAM_ATTR on_error(esp_cam_ctlr_handle_t h, const esp_cam_ctlr_error
     return false;
 }
 
+// ---- lane P/N swap in the D-PHY (VERIFY on hardware)
+//
+// ESP-IDF configures the CSI D-PHY through its test interface: a code, then a
+// value (mipi_csi_hal.c writes code 0x44, the lane-0 HS frequency range). The
+// codes and the frequency-range table there match the Raspberry Pi 5's MIPI
+// D-PHY (Linux rp1_cfe/dphy.c), which swaps P and N with codes 0x35 (clock
+// lane) and 0x45 (data lane 0). ESP-IDF has no setting for the swap, so this
+// redoes ESP-IDF's PHY setup with those two codes added, before streaming.
+// Whether the ESP32-P4's PHY honours them is what PNSWAP is for.
+
+#define DPHY_HS_RX_CTRL_LANE0 0x44
+#define DPHY_CLK_PN_SWAP      0x35
+#define DPHY_D0_PN_SWAP       0x45
+
+// One test-interface write, in ESP-IDF's sequence: the code latches on the
+// falling clock edge with TESTEN high, the value on the rising edge.
+static void dphy_write(csi_host_dev_t* dev, uint8_t code, uint8_t val)
+{
+    mipi_csi_phy_ll_write_clock(dev, 0, false);
+    mipi_csi_phy_ll_write_reg_addr(dev, code);
+    mipi_csi_phy_ll_write_clock(dev, 1, false);
+    mipi_csi_phy_ll_write_clock(dev, 0, false);
+    mipi_csi_phy_ll_write_reg_val(dev, val);
+    mipi_csi_phy_ll_write_clock(dev, 1, false);
+    mipi_csi_phy_ll_write_clock(dev, 0, false);
+}
+
+static void dphy_swap_pn(int lane_mbps)
+{
+    csi_host_dev_t* dev = MIPI_CSI_HOST_LL_GET_HW(0);
+    uint8_t hs_freq = 0;
+    for (size_t i = 0; i < num_of_soc_mipi_csi_phy_pll_ranges; i++) {
+        if (lane_mbps >= soc_mipi_csi_phy_pll_ranges[i].start_mbps &&
+            lane_mbps <= soc_mipi_csi_phy_pll_ranges[i].end_mbps) {
+            hs_freq = soc_mipi_csi_phy_pll_ranges[i].hs_freq_range_sel;
+            break;
+        }
+    }
+    // Hold the PHY in shutdown and reset, clear its test registers, and set
+    // them again: the frequency range as ESP-IDF did, then both swaps. The
+    // CSI host is left out of reset, so its settings (lanes, interrupts) stay.
+    mipi_csi_phy_ll_enable_shutdown_input(dev, true);
+    mipi_csi_phy_ll_enable_reset_output(dev, true);
+    mipi_csi_phy_ll_write_reg_addr(dev, 0x0);
+    mipi_csi_phy_ll_write_clock(dev, 0, true);
+    esp_rom_delay_us(20);
+    mipi_csi_phy_ll_write_clock(dev, 0, false);
+    esp_rom_delay_us(20);
+    dphy_write(dev, DPHY_HS_RX_CTRL_LANE0, hs_freq << 1);
+    dphy_write(dev, DPHY_CLK_PN_SWAP, 1);
+    dphy_write(dev, DPHY_D0_PN_SWAP, 1);
+    esp_rom_delay_us(10);
+    mipi_csi_phy_ll_enable_shutdown_input(dev, false);
+    esp_rom_delay_us(10);
+    mipi_csi_phy_ll_enable_reset_output(dev, false);
+}
+
 void IRAM_ATTR capture_on_fsync(int64_t t_us)
 {
     s_fsync_t = t_us;
@@ -152,6 +214,7 @@ esp_err_t capture_init(uint16_t w, uint16_t h, int lanes, int lane_mbps)
         .queue_items = 1,
     };
     ESP_RETURN_ON_ERROR(esp_cam_new_csi_ctlr(&csi, &s_cam), TAG, "CSI controller");
+    if (s_pn_swap) dphy_swap_pn(lane_mbps);
     esp_cam_ctlr_evt_cbs_t cbs = {
         .on_get_new_trans = on_get_new_trans,
         .on_trans_finished = on_trans_finished,
@@ -174,7 +237,8 @@ esp_err_t capture_init(uint16_t w, uint16_t h, int lanes, int lane_mbps)
     ESP_RETURN_ON_ERROR(esp_isp_new_processor(&isp, &s_isp), TAG, "ISP");
     ESP_RETURN_ON_ERROR(esp_isp_enable(s_isp), TAG, "ISP enable");
 
-    ESP_LOGI(TAG, "%ux%u RAW8, %lu slots of %lu B", w, h, (unsigned long)s_nslots, (unsigned long)s_slot_bytes);
+    ESP_LOGI(TAG, "%ux%u RAW8, %lu slots of %lu B, lane P/N swap %s", w, h, (unsigned long)s_nslots,
+             (unsigned long)s_slot_bytes, s_pn_swap ? "on" : "off");
     return ESP_OK;
 }
 
@@ -235,5 +299,7 @@ void capture_release(int slot)
     xQueueSend(s_free, &slot, 0);
 }
 
+void capture_set_pn_swap(bool on) { s_pn_swap = on; }
+bool capture_pn_swap(void) { return s_pn_swap; }
 uint32_t capture_slots(void) { return s_nslots; }
 uint32_t capture_errors(void) { return s_errors; }

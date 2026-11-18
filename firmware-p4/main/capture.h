@@ -34,5 +34,10 @@ void capture_release(int slot);
 // From the FSYNC GPIO interrupt.
 void capture_on_fsync(int64_t t_us);
 
+// Swap the lane P/N pairs in the D-PHY (board.h MIPI_LANE_PN_SWAP). Takes
+// effect at the next capture_init().
+void capture_set_pn_swap(bool on);
+bool capture_pn_swap(void);
+
 uint32_t capture_slots(void);
 uint32_t capture_errors(void);  // CSI host error events since init

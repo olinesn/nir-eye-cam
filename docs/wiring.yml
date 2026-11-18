@@ -44,8 +44,8 @@ builds:
       - id: shift
         name: TXB0104 level-shifter breakout (Adafruit 1875 or SparkFun BOB-11771)
         notes: >-
-          1.8 V side from the P-Board's I/O rail, 3.3 V side from the board. Three of its four
-          channels: FSYNC, TRIG and STROBE.
+          1.8 V side from the P-Board's I/O rail, 3.3 V side from the board. Two of its four
+          channels: FSYNC and STROBE (the P-Board has no 1.8 V pin for the sensor's EXTSYNC input).
       - id: driver
         name: "IR LED driver: 74HCT08 AND gate + IRLB3813PBF MOSFET"
         notes: >-
@@ -82,19 +82,16 @@ builds:
       - from: pboard
         to: shift
         signals:
-          - "FSYNC_OUT, sensor GPIO{SENSOR_IO_FSYNC_OUT:value}"
-          - "STROBE, sensor GPIO{SENSOR_IO_STROBE:value}"
-          - "1.8 V I/O rail → VA"
+          - "FSYNC_OUT, sensor GPIO{SENSOR_IO_FSYNC_OUT:value} (TP2)"
+          - "STROBE, sensor GPIO{SENSOR_IO_STROBE:value} (J3 pin 2)"
+          - "1.8 V I/O rail (J3 pin 1) → VA"
 
       - from: shift
         to: board
         signals: ["FSYNC → {PIN_FSYNC}"]
       - from: board
         to: shift
-        signals: ["{PIN_TRIG_OUT} → TRIG", "3V3 → VB, GND"]
-      - from: shift
-        to: pboard
-        signals: ["EXTSYNC, sensor GPIO{SENSOR_IO_EXTSYNC:value}"]
+        signals: ["3V3 → VB, GND"]
       - from: shift
         to: driver
         signals: ["STROBE (3.3 V) → 74HCT08"]

@@ -57,6 +57,18 @@ To release:
 
 ### Fixed
 
+- ESP32-P4 firmware and docs fitted to ST's P-Board as its schematic
+  (PCB4280D) shows it. Its clock and data pairs are wired P/N swapped, which
+  the ESP32-P4 has no ESP-IDF setting for: the firmware now writes the
+  D-PHY's swap test codes (the ones the Raspberry Pi 5 uses, whose D-PHY
+  setup ESP-IDF's matches), on by default, with a new `PNSWAP 0|1` command and
+  `pn_swap` in `INFO` to try both (not yet run on hardware). The sensor's
+  STROBE moves from GPIO1 to GPIO2 (header J3) and FSYNC_OUT from GPIO2 to
+  GPIO3 (test point TP2): on this board GPIO1 sets the direction of the
+  buffer on GPIO0 and is brought out nowhere, so strobing it would have
+  flipped that buffer every frame. GPIO0 reaches only the camera connector,
+  so the wiring no longer runs TRIG through the level shifter; how EXTSYNC
+  reaches it is still open.
 - ESP32-P4 firmware: `TRIG` ran off the RC oscillator below ~38 Hz (an
   inaccurate frame rate, and no output at all below ~17 Hz), because the LEDC
   driver picked the clock source from the frequency. It now runs off the

@@ -56,11 +56,11 @@ connector; everything else on header J1:
 | Signal | ESP32-P4 | J1 pin | Connects to |
 |---|---|---|---|
 | I2C SDA / SCL | GPIO7 / GPIO8 | 3 / 5 | the camera connector already; J1 too |
-| FSYNC in | GPIO20 | 13 | sensor GPIO2 (FSYNC_OUT), through a level shifter |
+| FSYNC in | GPIO20 | 13 | sensor GPIO3 (FSYNC_OUT, the P-Board's TP2), through a level shifter |
 | SYNC in | GPIO21 | 11 | the shared sync line |
 | SYNC out | GPIO22 | 12 | the shared sync line (sync master only) |
-| TRIG out | GPIO23 | 7 | every sensor's GPIO0 (EXTSYNC), through a level shifter |
-| LED enable | GPIO32 | 26 | the gate that lets the sensor's STROBE (GPIO1) reach the LED driver |
+| TRIG out | GPIO23 | 7 | every sensor's GPIO0 (EXTSYNC); on the P-Board only through the camera connector (below) |
+| LED enable | GPIO32 | 26 | the gate that lets the sensor's STROBE (GPIO2) reach the LED driver |
 | Test LED | GPIO33 | 29 | an LED through 330 Ω to GND, filmed by every camera in the sync check (`BLINK`) |
 
 These pins are on J1 and the board itself does not use them: ESP-IDF's DVP
@@ -70,13 +70,18 @@ and GPIO0/1/45 (not connected by default) are left alone.
 
 ## Before first power-up
 
-Open questions about the P-Board, to check with a meter and its data brief
-before connecting it:
+What the P-Board's schematic (PCB4280D, from ST's STEVAL-CAM-M0I page)
+settles, and what is still to check with a meter before connecting it:
 
-- **Lane polarity.** ST's Raspberry Pi overlays set `lane-polarities <1 1>`
-  for some of its VD55G1 boards, and ST warned that one of its adapter boards
-  does not match the Raspberry Pi pinout. The ESP32-P4 cannot swap a lane's
-  P and N in software, so a swapped board needs a cable that swaps them.
+- **Lane polarity: swapped, and the firmware swaps it back (VERIFY).** The
+  schematic says the board's clock and data pairs are wired P/N swapped
+  relative to the Raspberry Pi pinout ("MIPI Lane P/N shall be swap by SW"),
+  and ST's and Raspberry Pi's overlays for it set `lane-polarities <1 1>`.
+  ESP-IDF has no setting for this, but its D-PHY setup uses the same test
+  codes as the Raspberry Pi 5's, which swaps the pairs with two more of them.
+  `MIPI_LANE_PN_SWAP` in `board.h` (default 1) writes those, and `PNSWAP 0|1`
+  changes it without reflashing. If frames never arrive, or `csi_errors`
+  climbs, with either setting, the pairs need crossing in hardware instead.
 - **The cable: a Raspberry Pi 5 camera cable (22-pin, 0.5 mm → 15-pin,
   1.0 mm).** The P-Board's 22-pin output uses the Raspberry Pi 5 pinout (an
   ST community thread, and ST's driver keeps its files for that connector
@@ -97,12 +102,21 @@ before connecting it:
   low or floating, `INFO` reports `cam_ok` 0 and the sensor never answers at
   0x10. Pull the line up to 3.3 V (what a Raspberry Pi drives), or, if the
   ESP32-P4X schematic shows a GPIO on it, set `PIN_XSHUTDOWN` to that GPIO.
-- **CLKIN.** `SENSOR_EXT_CLK_HZ` is 12 MHz, as in ST's overlay. The sensor's
-  PLL is computed from it.
-- **Sensor GPIOs.** ST's overlay drives the LED strobe from sensor GPIO2;
-  this firmware uses GPIO1 for STROBE and GPIO2 for FSYNC_OUT. Check which
-  sensor GPIOs the P-Board brings out, and swap the roles in `board.h` if
-  needed.
+- **CLKIN.** The P-Board clocks the module from its own 12 MHz oscillator,
+  which is what `SENSOR_EXT_CLK_HZ` says. There is no clock input.
+- **Sensor GPIOs, as the P-Board brings them out:**
+
+  | Sensor pin | Where | Role in this firmware |
+  |---|---|---|
+  | GPIO0 | Only the camera connector (CAM_IO1: pin 4 at the ESP32-P4X end), at 3.3 V through a one-bit buffer | EXTSYNC input |
+  | GPIO1 | Nowhere: it sets that buffer's direction (high: the sensor drives the connector; low: the connector drives GPIO0) | Left an input, as ST's driver leaves it |
+  | GPIO2 | Header J3 (1 = 1.8 V through 10 Ω, 2 = GPIO2 through 100 Ω, 3 = GND) and J4 | STROBE |
+  | GPIO3 | Test point TP2 only: solder a wire | FSYNC_OUT |
+
+  J4 (1.27 mm pitch: 1 GND, 2 SDA, 3 SCL, 4 GPIO2, 5 3.3 V) also carries the
+  I2C on its 3.3 V side, handy for a logic analyzer. How EXTSYNC reaches
+  GPIO0 is still open: what the ESP32-P4X does with its connector's pin 4,
+  and whether the buffer's direction pin needs driving low.
 - **I2C.** The bus is shared with the board's audio codec and touch
   controller; a scan should find the sensor alone at 0x10.
 - **Level shifting and the IR LED driver:** the sensor's GPIOs run at 1.8 V.
@@ -121,7 +135,10 @@ README's "Check that two cameras expose together").
    VD55G1) and `revision` `0x3030` (cut 3). Cut 2 (`0x2020`) needs ST's
    firmware patch, which is not included.
 2. `START`, then record a few seconds with `nireyecam-record --cam p4=PORT
-   --preview`. Check `csi_errors` in `INFO` stays 0.
+   --preview`. Check `csi_errors` in `INFO` stays 0. Steps 1 and 2 test
+   different things: the sensor answers over I2C whatever the lane polarity,
+   so a good step 1 with no frames in step 2 points at the polarity. Try
+   `STOP`, `PNSWAP 0`, `START` before anything else (`INFO` shows `pn_swap`).
 3. Confirm the timestamps. `INFO` and `frames.csv` should show one FSYNC per
    frame; see the VERIFY note in `capture.c`.
 4. Measure USB throughput at a few crop sizes. `send_all()` in `main.c` is
@@ -149,3 +166,6 @@ README's "Check that two cameras expose together").
 - `LED` is on/off (brightness set by the resistor); the sensor's STROBE
   decides when the LEDs are actually lit.
 - Changing `RES` re-creates the CSI controller; `ROI` only moves the crop.
+- `PNSWAP` writes two D-PHY test codes that ESP-IDF does not use, taken from
+  the Raspberry Pi 5's D-PHY driver because ESP-IDF's PHY setup matches it.
+  VERIFY on hardware that the ESP32-P4's PHY honours them.

@@ -636,7 +636,8 @@ def to_markdown(r: BenchReport) -> str:
 
     lines += ["", "### Hardware and firmware", ""]
     keys = ["board", "fw", "uid", "sensor", "model_id", "revision", "cam_ok", "cam_error",
-            "width", "height", "exposure", "frame_length", "frame_period_us", "again", "csi_errors"]
+            "width", "height", "exposure", "frame_length", "frame_period_us", "again", "csi_errors",
+            "pn_swap"]
     lines += [f"- `{k}`: {info[k]}" for k in keys if k in info and info[k] != ""]
     lines += ["- Lens, filter, IR LEDs, wiring and scene: _fill in_"]
 
