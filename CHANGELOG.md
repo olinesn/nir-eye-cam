@@ -57,6 +57,11 @@ To release:
 
 ### Fixed
 
+- ESP32-P4 firmware: silicon cut 2 VD55G1s now boot. The first CAM-5G1-160CLR
+  modules from ST are cut 2, which the firmware refused because it lacked
+  ST's firmware patch. It now writes the patch from ST's STM32 camera
+  middleware (version 2.2, BSD-3-Clause, kept unchanged with its license in
+  `firmware-p4/main/st/`) and checks the version the sensor reports.
 - ESP32-P4 firmware: with no camera attached (or one that failed to open),
   the streaming task spun without ever waiting once a host opened the port.
   It starved the USB link, so commands such as `INIT` and `INFO` never

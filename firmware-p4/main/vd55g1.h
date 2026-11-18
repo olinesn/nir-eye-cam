@@ -5,7 +5,8 @@
 // driver (github.com/STMicroelectronics/vd55g1-linux-driver), both used as a
 // reference for register addresses and values; no code copied. The model and
 // revision IDs follow ST's STM32 camera middleware
-// (github.com/STMicroelectronics/stm32-mw-camera, sensors/vd55g1).
+// (github.com/STMicroelectronics/stm32-mw-camera, sensors/vd55g1), whose
+// cut-2 firmware patch is included unchanged (BSD-3-Clause, main/st/).
 
 #pragma once
 

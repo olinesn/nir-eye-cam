@@ -58,7 +58,7 @@ cross-check.
 | Open item | Ask | Step | Without an answer |
 |---|---|---|---|
 | A lensless VD55G1: the packaged (ChipPack PLCC) part's drawing, cover glass and MOQ, or whether the CAM-5G1-081CLR's lens comes off | ST | Before you start | Use the STEVAL-55G1MBI's M12 holder |
-| Which silicon cut ships now. Cut 2 needs ST's patch, which the ESP32-P4 firmware does not include | ST | 15 | Read `revision` from `INFO` on arrival |
+| Which silicon cut ships now. Cut 2 needs ST's patch, which the ESP32-P4 firmware now loads (the first CAM-5G1-160CLR modules, October 2026, are cut 2) | ST | 15 | Read `revision` from `INFO` on arrival |
 | A Mira050 evaluation kit that exposes `TRIG_ILLUM` and the context registers; reference register settings or a driver, and its licence | ams | Before you start, Part 3 | A carrier board for the chip-scale package, configured from the datasheet |
 | Mira050 assembly guidance (reflow profile, underfill); samples below 120; lifecycle and lead time | ams | Before you start | Buy single units from a distributor |
 

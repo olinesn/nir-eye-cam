@@ -129,8 +129,9 @@ from half the citations.
 [LICENSE](LICENSE)). Code adapted from elsewhere keeps its notice (see the
 README's License section). Don't copy GPL code into the firmware. In
 particular, the VD55G1 Linux driver may be consulted for register values but
-not copied. Its firmware patch blob is GPL too, and is deliberately not
-included.
+not copied. Its firmware patch blob is GPL too and is not used: the
+firmware loads the cut-2 patch from ST's STM32 camera middleware instead,
+which is BSD-3-Clause and kept with its notice in `firmware-p4/main/st/`.
 
 ## Commits and pull requests
 

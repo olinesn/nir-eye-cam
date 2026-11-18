@@ -132,8 +132,9 @@ wired to the sensor's GPIO0. `nireyecam-synctest` does the second half (the
 README's "Check that two cameras expose together").
 
 1. `INFO` over the serial port. `model_id` should read `0x53354731` (every
-   VD55G1) and `revision` `0x3030` (cut 3). Cut 2 (`0x2020`) needs ST's
-   firmware patch, which is not included.
+   VD55G1) and `revision` `0x3030` (cut 3) or `0x2020` (cut 2, which boots
+   with ST's firmware patch; the console log says "ST firmware patch 2.2
+   applied").
 2. `START`, then record a few seconds with `nireyecam-record --cam p4=PORT
    --preview`. Check `csi_errors` in `INFO` stays 0. Steps 1 and 2 test
    different things: the sensor answers over I2C whatever the lane polarity,
@@ -160,9 +161,10 @@ README's "Check that two cameras expose together").
   the start of exposure, and that `START` and `STOP` complete with no pulses
   arriving. With `EXTSYNC 0` (the default after `INIT`), cameras free-run and
   are aligned by timestamps.
-- Cut 2 sensors need ST's firmware patch, which is not included. Cut 3 boots
-  without it, as in ST's STM32 middleware; VERIFY that it streams correctly
-  (the mainline Linux driver patches every VD55G1).
+- Cut 2 sensors boot with ST's firmware patch 2.2, from its STM32 camera
+  middleware (`main/st/`). The mainline Linux driver uses a newer patch,
+  2.9, which is GPL-2.0 and so not included; VERIFY that 2.2 streams
+  correctly. Cut 3 boots without a patch.
 - `LED` is on/off (brightness set by the resistor); the sensor's STROBE
   decides when the LEDs are actually lit.
 - Changing `RES` re-creates the CSI controller; `ROI` only moves the crop.

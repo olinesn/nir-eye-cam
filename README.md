@@ -389,6 +389,11 @@ Third-party code included here keeps its own license:
   [firmware/LICENSE-hm01b0-library-for-pico](firmware/LICENSE-hm01b0-library-for-pico).
 - `firmware/pico_sdk_import.cmake` is copied unchanged from the
   [Raspberry Pi Pico SDK](https://github.com/raspberrypi/pico-sdk) (BSD-3-Clause).
+- `firmware-p4/main/st/vd55g1_patch_cut_2.c`, the VD55G1's firmware patch for
+  silicon cut 2, is copied unchanged from ST's
+  [STM32 camera middleware](https://github.com/STMicroelectronics/stm32-mw-camera)
+  (BSD-3-Clause, Copyright STMicroelectronics); its notice is in
+  [firmware-p4/main/st/LICENSE.md](firmware-p4/main/st/LICENSE.md).
 
 The VD55G1 driver in `firmware-p4/` was written from the sensor's register
 map; the GPL Linux driver was consulted for register values, but no code was
